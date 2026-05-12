@@ -125,7 +125,7 @@ export function AgentPerformanceTab({ data }: AgentPerformanceTabProps) {
       {/* Stacked Bar Chart */}
       <Card className="bg-white border border-slate-200 rounded-xl shadow-sm">
         <CardHeader className="pb-2 pt-4 px-5">
-          <CardTitle className="text-sm font-semibold text-slate-700">Agent Performance by Module</CardTitle>
+          <CardTitle className="text-sm font-semibold text-slate-700">Individual Performance by Module</CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-4">
           <ResponsiveContainer width="100%" height={300}>

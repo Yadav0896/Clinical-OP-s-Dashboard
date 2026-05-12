@@ -12,7 +12,7 @@ interface KpiCardsProps {
 
 const CARDS = [
   { label: 'Total Tasks', key: 'total', accent: '#00897B', icon: Activity },
-  { label: 'Active Agents', key: 'agents', accent: '#3B82F6', icon: Users },
+  { label: 'Active Individuals', key: 'agents', accent: '#3B82F6', icon: Users },
   { label: 'Avg Tasks/Day', key: 'avg', accent: '#A855F7', icon: TrendingUp },
   { label: 'Top Performer', key: 'top', accent: '#22C55E', icon: Award },
   { label: 'Fax Success Rate', key: 'fax', accent: '#F59E0B', icon: Printer },

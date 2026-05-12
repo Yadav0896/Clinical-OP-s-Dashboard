@@ -10,9 +10,10 @@ import { modTasks } from '@/lib/clinical-data';
 
 interface AgentChartProps {
   data: ClinicalRecord[];
+  title?: string;
 }
 
-export function AgentChart({ data }: AgentChartProps) {
+export function AgentChart({ data, title = 'Tasks by Individual' }: AgentChartProps) {
   const chartData = useMemo(() => {
     const map = new Map<string, { name: string; pi: number; ins: number; sch: number; fax: number; vob: number; total: number }>();
 

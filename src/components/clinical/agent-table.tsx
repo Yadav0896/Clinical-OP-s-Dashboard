@@ -27,14 +27,14 @@ export function AgentTable({ data }: AgentTableProps) {
   return (
     <Card className="bg-white border border-slate-200 rounded-xl shadow-sm">
       <CardHeader className="pb-2 pt-4 px-5">
-        <CardTitle className="text-sm font-semibold text-slate-700">Agent Summary</CardTitle>
+        <CardTitle className="text-sm font-semibold text-slate-700">Individual Summary</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
         <div className="max-h-[400px] overflow-y-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50 hover:bg-slate-50">
-                <TableHead className="text-slate-500 uppercase text-[10px] font-semibold tracking-wider">Agent</TableHead>
+                <TableHead className="text-slate-500 uppercase text-[10px] font-semibold tracking-wider">Individual</TableHead>
                 <TableHead className="text-slate-500 uppercase text-[10px] font-semibold tracking-wider text-right">Tasks</TableHead>
                 <TableHead className="text-slate-500 uppercase text-[10px] font-semibold tracking-wider text-right">Days</TableHead>
                 <TableHead className="text-slate-500 uppercase text-[10px] font-semibold tracking-wider text-right">Avg/Day</TableHead>

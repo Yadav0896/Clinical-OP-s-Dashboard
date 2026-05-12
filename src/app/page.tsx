@@ -387,7 +387,7 @@ export default function ClinicalOpsDashboard() {
 
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: <BarChart3 size={15} /> },
-    { id: 'agents', label: 'Agent Performance', icon: <Users size={15} /> },
+    { id: 'agents', label: 'Individual Performance', icon: <Users size={15} /> },
     { id: 'eod', label: 'EOD Generator', icon: <FileText size={15} /> },
     { id: 'fax-vob', label: 'Fax & VOB', icon: <Printer size={15} /> },
   ] as const;
@@ -545,15 +545,23 @@ export default function ClinicalOpsDashboard() {
           </TabsList>
 
           {/* Dashboard Tab */}
-          <TabsContent value="dashboard" className="space-y-5 animate-fade-in">
+          <TabsContent value="dashboard" className="space-y-6 animate-in fade-in duration-500">
             <KpiCards data={filteredData} />
-            <ModuleCards data={filteredData} />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              <AgentChart data={filteredData} />
-              <ModuleChart data={filteredData} />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <AgentChart data={filteredData} title="Tasks by Individual" />
+              </div>
+              <div>
+                <ModuleChart data={filteredData} title="Task Distribution by Module" />
+              </div>
             </div>
-            <TrendChart data={filteredData} />
-            <AgentTable data={filteredData} />
+
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-bold text-slate-800">Individual Performance Overview</h3>
+              </div>
+              <AgentTable data={filteredData} />
+            </div>
           </TabsContent>
 
           {/* Agent Performance Tab */}
