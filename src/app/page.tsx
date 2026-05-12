@@ -145,7 +145,8 @@ export default function ClinicalOpsDashboard() {
         console.error('[Init] IndexedDB read failed:', err);
       }
 
-      // Priority 2: Load from public/ (works on Vercel + self-hosted)
+      // Priority 2: Removed (No longer auto-loading public/ template)
+      /*
       try {
         const res = await fetch('/Clinical_Ops_Data_Entry_Populated.xlsx');
         if (res.ok) {
@@ -163,12 +164,13 @@ export default function ClinicalOpsDashboard() {
       } catch (err) {
         console.error('[Init] Public file load failed:', err);
       }
+      */
 
-      // Priority 3: Fallback to demo data
-      console.log('[Init] Using demo data');
-      setData(generateDummyData());
-      setFileName('Demo Data');
-      setDataSource('demo');
+      // Final state: Start with empty dashboard (all zeros)
+      console.log('[Init] No data source found - starting with empty dashboard');
+      setData([]); 
+      setFileName('');
+      setDataSource('none');
     };
 
     loadData();
