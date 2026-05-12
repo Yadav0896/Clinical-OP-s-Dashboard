@@ -288,6 +288,8 @@ function blankRecord(agent: string, date: string, clinic: string): ClinicalRecor
  * them into ClinicalRecord rows keyed by (person, date, clinic).
  */
 export function parseMultiSheetExcel(workbook: any): ClinicalRecord[] {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const XLSX = require('xlsx');
   const agg = new Map<string, ClinicalRecord>();
 
   function key(agent: string, date: string, clinic: string): string {
@@ -304,11 +306,65 @@ export function parseMultiSheetExcel(workbook: any): ClinicalRecord[] {
     return rec;
   }
 
+  function parseNumber(val: any): number {
+    if (val === null || val === undefined || val === '') return 0;
+    const n = Number(val);
+    return isNaN(n) ? 0 : n;
+  }
+
+  const sheets = workbook.SheetNames || [];
+  let foundCustom = false;
+
+  for (const sn of sheets) {
+    const sheet = workbook.Sheets[sn];
+    const raw = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as any[][];
+    
+    // Find header row (contains "Name of the Person")
+    let headerIdx = -1;
+    let nameColIdx = -1;
+    for (let i = 0; i < Math.min(raw.length, 25); i++) {
+      const row = raw[i];
+      const idx = row.findIndex((c: any) => String(c).toLowerCase().includes('name of the person'));
+      if (idx !== -1) {
+        headerIdx = i;
+        nameColIdx = idx;
+        break;
+      }
+    }
+
+    if (headerIdx !== -1) {
+      foundCustom = true;
+      const dateStr = new Date().toISOString().split('T')[0];
+      
+      for (let i = headerIdx + 1; i < raw.length; i++) {
+        const row = raw[i];
+        const person = String(row[nameColIdx] || '').trim();
+        
+        if (!person || person.toLowerCase() === 'total' || person.toLowerCase().includes('name of the person')) continue;
+        
+        const clinic = AGENT_CLINIC[person] || 'Denver Allergy';
+        const rec = upsert(person, dateStr, clinic);
+
+        // Map "Overall Tasks" columns from user's specific grid
+        // Columns L-T (approx indices 11-19 in 0-based array)
+        rec.prFormsCorrected += parseNumber(row[11]); 
+        rec.insuranceUpdated += parseNumber(row[14]);
+        rec.vobTotal += parseNumber(row[15]);
+        rec.insuranceNotes += parseNumber(row[16]);
+        rec.faxClassified += parseNumber(row[18]);
+        rec.formsUploadedEcw += parseNumber(row[19]);
+      }
+    }
+  }
+
+  if (foundCustom) return Array.from(agg.values());
+
+  // ── STANDARD: Multi-sheet layout ──
   function resolveDate(row: SheetRow, dateCol = 'Date'): string {
-    const raw = row[dateCol];
+    const raw = (row as any)[dateCol];
     let d = parseDateValue(raw);
     if (!d) {
-      const month = String(row['Month'] || '').trim();
+      const month = String((row as any)['Month'] || '').trim();
       if (month) d = monthToDate(month);
     }
     return d;
@@ -318,145 +374,46 @@ export function parseMultiSheetExcel(workbook: any): ClinicalRecord[] {
     return String(row[col] ?? '').trim();
   }
 
-  // ── Scheduling ──────────────────────────────────────────
-  for (const row of readSheetRows(workbook, 'Scheduling')) {
-    const person = getStr(row, 'Person Name');
-    if (!person) continue;
-    const rawDate = parseDateValue(row['Date']);
-    const month = String(row['Month'] || '').trim();
-    const date = rawDate || (month ? monthToDate(month) : '');
-    if (!date) continue; // skip rows with no date and no month
-    const clinic = normalizeClinic(getStr(row, 'Client')) || AGENT_CLINIC[person] || 'Denver Allergy';
-    const rec = upsert(person, date, clinic);
-    rec.schedTotal += 1;
-  }
+  for (const sn of ['Scheduling', 'Patient Registration', 'Health History', 'Insurance Validation', 'VOB Doc Upload', 'VOB Agent Calls', 'Fax Classification', 'Fax Referral', 'Duplicate Patients']) {
+    const rows = readSheetRows(workbook, sn);
+    for (const row of rows) {
+      const person = getStr(row, 'Person Name');
+      if (!person) continue;
+      const date = sn === 'VOB Agent Calls' ? (parseDateValue(row['Date of Call']) || (String(row['Month'] || '').trim() ? monthToDate(String(row['Month'])) : '')) : resolveDate(row);
+      if (!date) continue;
+      const clinic = normalizeClinic(getStr(row, 'Client')) || AGENT_CLINIC[person] || 'Denver Allergy';
+      const rec = upsert(person, date, clinic);
 
-  // ── Patient Registration ────────────────────────────────
-  for (const row of readSheetRows(workbook, 'Patient Registration')) {
-    const person = getStr(row, 'Person Name');
-    if (!person) continue;
-    const date = resolveDate(row);
-    if (!date) continue;
-    const clinic = normalizeClinic(getStr(row, 'Client')) || AGENT_CLINIC[person] || 'Denver Allergy';
-    const rec = upsert(person, date, clinic);
-    rec.prFormsCorrected += 1;
-  }
-
-  // ── Health History ──────────────────────────────────────
-  for (const row of readSheetRows(workbook, 'Health History')) {
-    const person = getStr(row, 'Person Name');
-    if (!person) continue;
-    const date = resolveDate(row);
-    if (!date) continue;
-    const clinic = normalizeClinic(getStr(row, 'Client')) || AGENT_CLINIC[person] || 'Denver Allergy';
-    const rec = upsert(person, date, clinic);
-    rec.hhFormsCorrected += 1;
-  }
-
-  // ── Insurance Validation ────────────────────────────────
-  for (const row of readSheetRows(workbook, 'Insurance Validation')) {
-    const person = getStr(row, 'Person Name');
-    if (!person) continue;
-    const date = resolveDate(row);
-    if (!date) continue;
-    const clinic = normalizeClinic(getStr(row, 'Client')) || AGENT_CLINIC[person] || 'Denver Allergy';
-    const rec = upsert(person, date, clinic);
-    rec.insuranceUpdated += 1;
-
-    // Check "Verified Manually" column (L in spec → index 11 in header)
-    const verifiedManually = getStr(row, 'Verified Manually').toUpperCase();
-    if (verifiedManually === 'YES') {
-      rec.manualVerifications += 1;
+      if (sn === 'Scheduling') rec.schedTotal += 1;
+      if (sn === 'Patient Registration') rec.prFormsCorrected += 1;
+      if (sn === 'Health History') rec.hhFormsCorrected += 1;
+      if (sn === 'Insurance Validation') {
+        rec.insuranceUpdated += 1;
+        if (getStr(row, 'Verified Manually').toUpperCase() === 'YES') rec.manualVerifications += 1;
+      }
+      if (sn === 'VOB Doc Upload') rec.vobTotal += 1;
+      if (sn === 'VOB Agent Calls') {
+        if (getStr(row, 'Calling Status').toLowerCase() === 'complete') rec.vobMatched += 1;
+        else rec.vobUnmatched += 1;
+      }
+      if (sn === 'Fax Classification') {
+        rec.faxReceived += 1;
+        if (getStr(row, 'Classified').toLowerCase() === 'yes') rec.faxClassified += 1;
+        else rec.faxClassifFailed += 1;
+        const forwarded = getStr(row, 'Forwarded').toLowerCase();
+        const ecwForwarded = getStr(row, 'eCW Forwarded');
+        if (forwarded === 'yes' || (ecwForwarded !== '' && ecwForwarded.toLowerCase() !== 'no' && ecwForwarded.toLowerCase() !== 'other')) rec.faxForwarded += 1;
+        else rec.faxFwdFailed += 1;
+        const ecwRenamed = getStr(row, 'eCW Renamed');
+        if (ecwRenamed !== '' && ecwRenamed.toLowerCase() === 'yes') rec.faxRenamed += 1;
+        else if (ecwRenamed !== '') rec.faxRenFailed += 1;
+      }
+      if (sn === 'Fax Referral') {
+        rec.faxReceived += 1;
+        rec.formsUploadedEcw += 1;
+      }
+      if (sn === 'Duplicate Patients') rec.duplicatesFound += 1;
     }
-  }
-
-  // ── VOB Doc Upload ──────────────────────────────────────
-  for (const row of readSheetRows(workbook, 'VOB Doc Upload')) {
-    const person = getStr(row, 'Person Name');
-    if (!person) continue;
-    const date = resolveDate(row);
-    if (!date) continue;
-    const clinic = normalizeClinic(getStr(row, 'Client')) || AGENT_CLINIC[person] || 'Denver Allergy';
-    const rec = upsert(person, date, clinic);
-    rec.vobTotal += 1;
-  }
-
-  // ── VOB Agent Calls ─────────────────────────────────────
-  for (const row of readSheetRows(workbook, 'VOB Agent Calls')) {
-    const person = getStr(row, 'Person Name');
-    if (!person) continue;
-    // This sheet uses "Date of Call" instead of "Date"
-    const rawDate = parseDateValue(row['Date of Call']);
-    const month = String(row['Month'] || '').trim();
-    const date = rawDate || (month ? monthToDate(month) : '');
-    if (!date) continue;
-    const clinic = normalizeClinic(getStr(row, 'Client')) || AGENT_CLINIC[person] || 'Denver Allergy';
-    const rec = upsert(person, date, clinic);
-
-    const callingStatus = getStr(row, 'Calling Status');
-    if (callingStatus.toLowerCase() === 'complete') {
-      rec.vobMatched += 1;
-    } else {
-      rec.vobUnmatched += 1;
-    }
-  }
-
-  // ── Fax Classification ──────────────────────────────────
-  for (const row of readSheetRows(workbook, 'Fax Classification')) {
-    const person = getStr(row, 'Person Name');
-    if (!person) continue;
-    const date = resolveDate(row);
-    if (!date) continue;
-    const clinic = normalizeClinic(getStr(row, 'Client')) || AGENT_CLINIC[person] || 'Denver Allergy';
-    const rec = upsert(person, date, clinic);
-
-    rec.faxReceived += 1;
-
-    const classified = getStr(row, 'Classified').toLowerCase();
-    if (classified === 'yes') {
-      rec.faxClassified += 1;
-    } else {
-      rec.faxClassifFailed += 1;
-    }
-
-    const forwarded = getStr(row, 'Forwarded').toLowerCase();
-    const ecwForwarded = getStr(row, 'eCW Forwarded');
-    if (forwarded === 'yes' || ecwForwarded !== '' && ecwForwarded.toLowerCase() !== 'no' && ecwForwarded.toLowerCase() !== 'other') {
-      rec.faxForwarded += 1;
-    } else {
-      rec.faxFwdFailed += 1;
-    }
-
-    const ecwRenamed = getStr(row, 'eCW Renamed');
-    if (ecwRenamed !== '' && ecwRenamed.toLowerCase() === 'yes') {
-      rec.faxRenamed += 1;
-    } else if (ecwRenamed !== '') {
-      rec.faxRenFailed += 1;
-    }
-  }
-
-  // ── Fax Referral ────────────────────────────────────────
-  for (const row of readSheetRows(workbook, 'Fax Referral')) {
-    const person = getStr(row, 'Person Name');
-    if (!person) continue;
-    const date = resolveDate(row);
-    if (!date) continue;
-    const clinic = normalizeClinic(getStr(row, 'Client')) || AGENT_CLINIC[person] || 'Denver Allergy';
-    const rec = upsert(person, date, clinic);
-    // Each referral row also represents a received fax
-    rec.faxReceived += 1;
-    rec.formsUploadedEcw += 1;
-  }
-
-  // ── Duplicate Patients ──────────────────────────────────
-  for (const row of readSheetRows(workbook, 'Duplicate Patients')) {
-    const person = getStr(row, 'Person Name');
-    if (!person) continue;
-    const date = resolveDate(row);
-    if (!date) continue;
-    const clinic = normalizeClinic(getStr(row, 'Client')) || AGENT_CLINIC[person] || 'Denver Allergy';
-    const rec = upsert(person, date, clinic);
-    rec.duplicatesFound += 1;
   }
 
   return Array.from(agg.values());
