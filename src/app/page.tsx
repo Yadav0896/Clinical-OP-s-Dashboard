@@ -585,12 +585,16 @@ export default function ClinicalOpsDashboard() {
 
       {/* ─── Footer ──────────────────────────────────────── */}
       <footer className="mt-auto border-t border-slate-200 bg-white">
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 py-3">
-          <p className="text-[11px] text-slate-400 text-center">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-[11px] text-slate-400">
             RagaAI Clinical Ops · Manual Team Performance Tracker · 2026
             {isLive && ' · Real-time Sync Enabled'}
-            {deploymentMode === 'vercel' && ' · Deployed on Vercel'}
           </p>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-teal-600 bg-teal-50 px-2 py-0.5 rounded border border-teal-100 uppercase tracking-wider">
+              v2.0 - DYNAMIC SYNC
+            </span>
+          </div>
         </div>
       </footer>
     </div>
