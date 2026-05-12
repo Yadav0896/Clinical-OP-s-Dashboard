@@ -479,7 +479,7 @@ export default function ClinicalOpsDashboard() {
 
       {/* ─── Main Content ────────────────────────────────── */}
       <main className="flex-1 max-w-[1440px] w-full mx-auto px-4 sm:px-6 py-5">
-        {/* Filters */}
+      {/* Filters */}
         <div className="mb-5">
           <FiltersBar
             filters={filters}
@@ -487,6 +487,8 @@ export default function ClinicalOpsDashboard() {
             onUpload={handleUpload}
             onExport={handleExport}
             hasData={data.length > 0}
+            availableAgents={Array.from(new Set(data.map(r => r.agent).filter(Boolean))).sort()}
+            availableClinics={Array.from(new Set(data.map(r => r.clinic).filter(Boolean))).sort()}
           />
         </div>
 

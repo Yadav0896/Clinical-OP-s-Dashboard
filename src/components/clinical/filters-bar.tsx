@@ -10,15 +10,12 @@ import { Upload, Download, RotateCcw, Filter } from 'lucide-react';
 import type { FilterState } from '@/lib/clinical-data';
 import { AGENTS, CLINICS } from '@/lib/clinical-data';
 
-interface FiltersBarProps {
-  filters: FilterState;
-  onFilterChange: (filters: FilterState) => void;
-  onUpload: (file: File) => void;
-  onExport: () => void;
   hasData: boolean;
+  availableAgents: string[];
+  availableClinics: string[];
 }
 
-export function FiltersBar({ filters, onFilterChange, onUpload, onExport, hasData }: FiltersBarProps) {
+export function FiltersBar({ filters, onFilterChange, onUpload, onExport, hasData, availableAgents, availableClinics }: FiltersBarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (
@@ -35,7 +32,7 @@ export function FiltersBar({ filters, onFilterChange, onUpload, onExport, hasDat
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Clinics</SelectItem>
-            {CLINICS.map(c => (
+            {availableClinics.map(c => (
               <SelectItem key={c} value={c}>
                 {c.replace(' Allergy', '')}
               </SelectItem>
@@ -48,11 +45,11 @@ export function FiltersBar({ filters, onFilterChange, onUpload, onExport, hasDat
           onValueChange={(v) => onFilterChange({ ...filters, agent: v })}
         >
           <SelectTrigger className="w-[150px] h-8 text-xs bg-slate-50 border-slate-200">
-            <SelectValue placeholder="All Agents" />
+            <SelectValue placeholder="All Individuals" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Agents</SelectItem>
-            {AGENTS.map(a => (
+            <SelectItem value="all">All Individuals</SelectItem>
+            {availableAgents.map(a => (
               <SelectItem key={a} value={a}>
                 {a.split(' ')[0]}
               </SelectItem>
