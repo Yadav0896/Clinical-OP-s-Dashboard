@@ -54,8 +54,9 @@ export async function POST(request: Request) {
 
     const gid = extractGid(url);
 
-    // Build export URL (xlsx format)
-    let exportUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=xlsx`;
+    // Build export URL (xlsx format) with cache busting
+    const timestamp = Date.now();
+    let exportUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=xlsx&t=${timestamp}`;
     if (gid) {
       exportUrl += `&gid=${gid}`;
     }
@@ -66,13 +67,17 @@ export async function POST(request: Request) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-    // Fetch from Google
+    // Fetch from Google - Force no-cache to ensure latest data
     let response: Response;
     try {
       response = await fetch(exportUrl, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (compatible; ClinicalOpsDashboard/1.0)',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
         },
+        cache: 'no-store', // Next.js specific: disable Data Cache
         redirect: 'follow',
         signal: controller.signal,
       });
