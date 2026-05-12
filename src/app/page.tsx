@@ -2,7 +2,8 @@
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { BarChart3, Users, FileText, Printer, CheckCircle, Radio, RefreshCw, Cloud } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { BarChart3, Users, FileText, Printer, CheckCircle, Radio, RefreshCw, Cloud, RotateCcw } from 'lucide-react';
 import { ConnectSheet } from '@/components/clinical/connect-sheet';
 import { FiltersBar } from '@/components/clinical/filters-bar';
 import { KpiCards } from '@/components/clinical/kpi-cards';
