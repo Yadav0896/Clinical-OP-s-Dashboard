@@ -564,7 +564,7 @@ export default function ClinicalOpsDashboard() {
             </div>
           </TabsContent>
 
-          {/* Agent Performance Tab */}
+          {/* Individual Performance Tab */}
           <TabsContent value="agents" className="animate-fade-in">
             <AgentPerformanceTab data={filteredData} />
           </TabsContent>

@@ -52,6 +52,8 @@ export const AGENTS = [
   'Padmavathi', 'Praveen', 'Usman', 'Vinith', 'Abhinav',
 ] as const;
 
+export const INDIVIDUALS = AGENTS;
+
 export const CLINICS = [
   'Denver Allergy', 'Dallas Allergy', 'Mid Island Allergy',
   'St. Paul Allergy', 'Chacko Allergy',
@@ -90,7 +92,7 @@ const NUMERIC_FIELDS: (keyof ClinicalRecord)[] = [
 ];
 
 export function totalTasks(r: ClinicalRecord): number {
-  return NUMERIC_FIELDS.reduce((sum, field) => sum + (r[field] as number), 0);
+  return NUMERIC_FIELDS.reduce((sum, field) => sum + Number(r[field] || 0), 0);
 }
 
 export function modTasks(r: ClinicalRecord, mod: string): number {
@@ -104,9 +106,9 @@ export function modTasks(r: ClinicalRecord, mod: string): number {
       return r.schedTotal + r.newPatients + r.followUp +
         r.adminBookings + r.botBookings + r.duplicatesFound + r.hmoFlagged;
     case 'Fax':
-      return r.faxReceived + r.faxClassified + r.faxForwarded + r.faxRenamed + r.faxDocUploading;
+      return Number(r.faxReceived || 0) + Number(r.faxClassified || 0) + Number(r.faxForwarded || 0) + Number(r.faxRenamed || 0) + Number(r.faxDocUploading || 0);
     case 'VOB':
-      return r.vobTotal + r.vobMatched + r.vobCreated + r.vobUpdated;
+      return Number(r.vobTotal || 0) + Number(r.vobMatched || 0) + Number(r.vobCreated || 0) + Number(r.vobUpdated || 0);
     default:
       return 0;
   }
@@ -322,7 +324,7 @@ export function parseMultiSheetExcel(workbook: any): ClinicalRecord[] {
 
   // ── Scheduling ──────────────────────────────────────────
   for (const row of readSheetRows(workbook, 'Scheduling')) {
-    const person = getStr(row, 'Person Name');
+    const person = getStr(row, 'Person Name') || getStr(row, 'Individual Name');
     if (!person) continue;
     const rawDate = parseDateValue(row['Date']);
     const month = String(row['Month'] || '').trim();
@@ -446,8 +448,8 @@ export function parseMultiSheetExcel(workbook: any): ClinicalRecord[] {
     const clinic = normalizeClinic(getStr(row, 'Client')) || AGENT_CLINIC[person] || 'Denver Allergy';
     const rec = upsert(person, date, clinic);
     // Each referral row also represents a received fax
-    rec.faxReceived += 1;
-    rec.formsUploadedEcw += 1;
+    rec.faxReceived = (Number(rec.faxReceived) || 0) + 1;
+    rec.formsUploadedEcw = (Number(rec.formsUploadedEcw) || 0) + 1;
   }
 
   // ── Fax Doc Uploading ──────────────────────────────────

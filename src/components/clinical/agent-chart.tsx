@@ -39,7 +39,7 @@ export function AgentChart({ data, title = 'Tasks by Individual' }: AgentChartPr
   return (
     <Card className="bg-white border border-slate-200 rounded-xl shadow-sm">
       <CardHeader className="pb-2 pt-4 px-5">
-        <CardTitle className="text-sm font-semibold text-slate-700">Tasks by Agent</CardTitle>
+        <CardTitle className="text-sm font-semibold text-slate-700">Tasks by Individual</CardTitle>
       </CardHeader>
       <CardContent className="px-4 pb-4">
         <ResponsiveContainer width="100%" height={300}>
