@@ -10,6 +10,11 @@ import { Upload, Download, RotateCcw, Filter } from 'lucide-react';
 import type { FilterState } from '@/lib/clinical-data';
 import { AGENTS, CLINICS } from '@/lib/clinical-data';
 
+interface FiltersBarProps {
+  filters: FilterState;
+  onFilterChange: (filters: FilterState) => void;
+  onUpload: (file: File) => void;
+  onExport: () => void;
   hasData: boolean;
   availableAgents: string[];
   availableClinics: string[];
