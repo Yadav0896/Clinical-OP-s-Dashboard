@@ -7,11 +7,11 @@ import { ConnectSheet } from '@/components/clinical/connect-sheet';
 import { FiltersBar } from '@/components/clinical/filters-bar';
 import { KpiCards } from '@/components/clinical/kpi-cards';
 import { ModuleCards } from '@/components/clinical/module-cards';
-import { AgentChart } from '@/components/clinical/agent-chart';
+import { IndividualChart } from '@/components/clinical/individual-chart';
 import { ModuleChart } from '@/components/clinical/module-chart';
 import { TrendChart } from '@/components/clinical/trend-chart';
-import { AgentTable } from '@/components/clinical/agent-table';
-import { AgentPerformanceTab } from '@/components/clinical/agent-performance-tab';
+import { IndividualTable } from '@/components/clinical/individual-table';
+import { IndividualPerformanceTab } from '@/components/clinical/individual-performance-tab';
 import { EodGeneratorTab } from '@/components/clinical/eod-generator-tab';
 import { FaxVobTab } from '@/components/clinical/fax-vob-tab';
 import {
@@ -551,7 +551,7 @@ export default function ClinicalOpsDashboard() {
             <KpiCards data={filteredData} />
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2">
-                <AgentChart data={filteredData} title="Tasks by Individual" />
+                <IndividualChart data={filteredData} title="Tasks by Individual" />
               </div>
               <div>
                 <ModuleChart data={filteredData} title="Task Distribution by Module" />
@@ -562,13 +562,13 @@ export default function ClinicalOpsDashboard() {
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-bold text-slate-800">Individual Performance Overview</h3>
               </div>
-              <AgentTable data={filteredData} />
+              <IndividualTable data={filteredData} />
             </div>
           </TabsContent>
 
           {/* Individual Performance Tab */}
           <TabsContent value="agents" className="animate-fade-in">
-            <AgentPerformanceTab data={filteredData} />
+            <IndividualPerformanceTab data={filteredData} />
           </TabsContent>
 
           {/* EOD Generator Tab */}

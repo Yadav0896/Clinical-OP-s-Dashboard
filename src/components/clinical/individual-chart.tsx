@@ -13,7 +13,7 @@ interface AgentChartProps {
   title?: string;
 }
 
-export function AgentChart({ data, title = 'Tasks by Individual' }: AgentChartProps) {
+export function IndividualChart({ data, title = 'Tasks by Individual' }: AgentChartProps) {
   const chartData = useMemo(() => {
     const map = new Map<string, { name: string; pi: number; ins: number; sch: number; fax: number; vob: number; total: number }>();
 

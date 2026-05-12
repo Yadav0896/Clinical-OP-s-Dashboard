@@ -13,7 +13,7 @@ interface AgentTableProps {
   data: ClinicalRecord[];
 }
 
-export function AgentTable({ data }: AgentTableProps) {
+export function IndividualTable({ data }: AgentTableProps) {
   const summaries = useMemo(() => getAgentSummaries(data), [data]);
   const maxTotal = summaries[0]?.total || 1;
 
