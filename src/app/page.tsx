@@ -225,7 +225,11 @@ export default function ClinicalOpsDashboard() {
         return;
       }
 
-      // ── Server file polling ──
+      // ── Server file polling (ONLY if no other source is active) ──
+      if (dataSource !== 'none' && dataSource !== 'default') {
+        return; 
+      }
+
       try {
         const res = await fetch('/api/excel-status', {
           cache: 'no-store',
