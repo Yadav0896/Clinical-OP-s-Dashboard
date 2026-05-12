@@ -3,8 +3,8 @@ import { Providers } from "@/components/providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "RagaAI Clinical Ops — Manual Team Tracker",
-  description: "Healthcare agents clinical operations performance dashboard for manual team tracking",
+  title: "RagaAI Clinical Ops v2.1 — Dynamic Dashboard",
+  description: "Dynamic performance dashboard for clinical operations team members",
 };
 
 export default function RootLayout({

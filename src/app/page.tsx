@@ -430,6 +430,18 @@ export default function ClinicalOpsDashboard() {
               onUpload={handleUpload}
               dataSource={dataSource}
             />
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-[10px] border-red-200 text-red-500 hover:bg-red-50"
+              onClick={() => {
+                localStorage.clear();
+                window.location.reload();
+              }}
+            >
+              <RotateCcw size={12} className="mr-1" />
+              Reset App
+            </Button>
             {isLive && (
               <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                 showRefreshBanner
