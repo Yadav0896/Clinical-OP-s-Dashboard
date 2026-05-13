@@ -307,7 +307,7 @@ export function parseMultiSheetExcel(workbook: any, XLSXLib?: any): ClinicalReco
     }
 
     console.log(`[Parser] Sheet "${sheetName}": ${rows.length} rows, sample headers:`, rows.length > 0 ? Object.keys(rows[0]).slice(0, 6) : []);
-    const parsed = parseExcelData(rows);
+    const parsed = parseExcelData(rows, sheetName);
     console.log(`[Parser] Sheet "${sheetName}": parsed ${parsed.length} records`);
     allRecords.push(...parsed);
   }
@@ -497,22 +497,24 @@ function parseString(val: unknown): string {
   return String(val).trim();
 }
 
-export function parseExcelData(rows: Record<string, unknown>[]): ClinicalRecord[] {
+export function parseExcelData(rows: Record<string, unknown>[], sheetNameInput?: string): ClinicalRecord[] {
   if (!rows || rows.length === 0) return [];
 
-  // ── Detect which sheet type this is based on available columns ───────────
+  const sName = (sheetNameInput || '').toLowerCase().trim();
+
+  // ── Detect which sheet type this is based on sheet name (primary) or columns (fallback) ───────────
   const allKeys = Object.keys(rows[0]).map(k => k.toLowerCase().trim());
   const hasCol = (name: string) => allKeys.includes(name.toLowerCase().trim());
 
-  const isScheduling      = hasCol('visit type') || hasCol('appointment date');
-  const isPatientReg      = hasCol('field checked') && !hasCol('health history');
-  const isHealthHistory   = hasCol('field checked') && !hasCol('visit type');
-  const isDuplicate       = hasCol('duplicate patient name') || hasCol('merged');
-  const isInsurance       = hasCol('eligibility status') || hasCol('verified manually');
-  const isVobDoc          = hasCol('vob doc on ecw?') || hasCol('vob date');
-  const isVobAgent        = hasCol('calling status') || hasCol('date of call');
-  const isFaxClass        = hasCol('classified') || hasCol('fax last 6 digits');
-  const isFaxReferral     = hasCol('fax receipt date') || hasCol('fax / document');
+  const isScheduling      = sName.includes('scheduling') || (hasCol('visit type') && !hasCol('eligibility status'));
+  const isPatientReg      = sName.includes('patient registration') || (hasCol('field checked') && !sName.includes('health history'));
+  const isHealthHistory   = sName.includes('health history') || (hasCol('field checked') && !hasCol('visit type') && !sName.includes('registration'));
+  const isDuplicate       = sName.includes('duplicate') || hasCol('duplicate patient name') || hasCol('merged');
+  const isInsurance       = sName.includes('insurance') || hasCol('eligibility status') || hasCol('verified manually');
+  const isVobDoc          = sName.includes('vob doc') || hasCol('vob doc on ecw?') || hasCol('vob date');
+  const isVobAgent        = sName.includes('vob agent') || hasCol('calling status') || hasCol('date of call');
+  const isFaxClass        = sName.includes('fax classification') || hasCol('classified') || hasCol('fax last 6 digits');
+  const isFaxReferral     = sName.includes('fax referral') || hasCol('fax receipt date') || hasCol('fax / document');
   // Any other unknown sheet type falls through to the generic "fax doc upload" counter below
 
   // ── Aggregation map: key = "PersonName::date::clinic" ────────────────────

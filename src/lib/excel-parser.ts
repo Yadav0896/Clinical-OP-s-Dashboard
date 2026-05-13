@@ -38,7 +38,7 @@ export function parseExcelFile(file: File): Promise<ClinicalRecord[]> {
           return;
         }
 
-        const records = parseExcelData(rows);
+        const records = parseExcelData(rows, sheetName);
         resolve(records);
       } catch (err) {
         reject(err);
