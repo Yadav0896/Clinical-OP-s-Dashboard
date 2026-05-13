@@ -600,6 +600,7 @@ function generateSingleRecord(agent: string, date: string): ClinicalRecord {
   const vobCreated = rand(Math.floor(vobUnmatched * 0.3), vobUnmatched);
   const vobUpdated = rand(Math.floor(vobMatched * 0.1), Math.floor(vobMatched * 0.4));
   const vobFailed = rand(0, 3);
+  const faxDocUploading = rand(0, 10);
 
   return {
     date,
@@ -632,6 +633,7 @@ function generateSingleRecord(agent: string, date: string): ClinicalRecord {
     faxFwdFailed,
     faxRenamed,
     faxRenFailed,
+    faxDocUploading,
     failedFaxIds: faxClassifFailed > 0 ? `FAX-${rand(1000, 9999)}, FAX-${rand(1000, 9999)}` : '',
     faxNotes: '',
     vobTotal,
