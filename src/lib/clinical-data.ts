@@ -286,140 +286,21 @@ function blankRecord(agent: string, date: string, clinic: string): ClinicalRecor
 
 // ─── Multi-Sheet Excel Parser ──────────────────────────────
 
-/**
- * Parse the multi-sheet Clinical Ops Excel workbook dynamically.
- * Instead of hardcoded sheet names, it looks for keywords in tab names.
- */
 export function parseMultiSheetExcel(workbook: any): ClinicalRecord[] {
-  const agg = new Map<string, ClinicalRecord>();
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const XLSX = require('xlsx');
+  const allRecords: ClinicalRecord[] = [];
   const sheetNames = Object.keys(workbook.Sheets);
 
-  function key(agent: string, date: string, clinic: string): string {
-    return `${agent}::${date}::${clinic}`;
-  }
-
-  function upsert(agent: string, date: string, clinic: string): ClinicalRecord {
-    const k = key(agent, date, clinic);
-    let rec = agg.get(k);
-    if (!rec) {
-      rec = blankRecord(agent, date, clinic);
-      agg.set(k, rec);
-    }
-    return rec;
-  }
-
-  function resolveDate(row: SheetRow, dateCol = 'Date'): string {
-    const raw = row[dateCol];
-    let d = parseDateValue(raw);
-    if (!d) {
-      const month = String(row['Month'] || '').trim();
-      if (month) d = monthToDate(month);
-    }
-    return d;
-  }
-
-  function getStr(row: SheetRow, col: string): string {
-    return String(row[col] ?? '').trim();
-  }
-
-  // Define keyword mappings for modules
-  const KEYWORDS = {
-    scheduling: ['schedule', 'scheduling'],
-    intake: ['patient registration', 'health history', 'forms', 'intake'],
-    insurance: ['insurance', 'validation', 'eligibility'],
-    fax: ['fax', 'referral', 'classification', 'upload', 'faxes'],
-    vob: ['vob', 'benefit'],
-    duplicate: ['duplicate'],
-  };
-
   for (const sheetName of sheetNames) {
-    const nameLower = sheetName.toLowerCase();
-    const rows = readSheetRows(workbook, sheetName);
-    if (rows.length === 0) continue;
-
-    for (const row of rows) {
-      // Find the person name - check multiple possible header names
-      const person = getStr(row, 'Person Name') || getStr(row, 'Individual Name') || getStr(row, 'Agent') || getStr(row, 'Name');
-      if (!person) continue;
-
-      const date = resolveDate(row, nameLower.includes('vob agent') ? 'Date of Call' : 'Date');
-      if (!date) continue;
-
-      const clinic = normalizeClinic(getStr(row, 'Client')) || AGENT_CLINIC[person] || 'Denver Allergy';
-      const rec = upsert(person, date, clinic);
-
-      // ─── Map sheet to module based on keywords ───────────
-      
-      // Scheduling
-      if (KEYWORDS.scheduling.some(k => nameLower.includes(k))) {
-        rec.schedTotal = (Number(rec.schedTotal) || 0) + 1;
-      }
-      
-      // Patient Intake
-      if (KEYWORDS.intake.some(k => nameLower.includes(k))) {
-        if (nameLower.includes('registration')) rec.prFormsCorrected = (Number(rec.prFormsCorrected) || 0) + 1;
-        else if (nameLower.includes('history')) rec.hhFormsCorrected = (Number(rec.hhFormsCorrected) || 0) + 1;
-        else rec.formsUploadedEcw = (Number(rec.formsUploadedEcw) || 0) + 1;
-      }
-
-      // Insurance
-      if (KEYWORDS.insurance.some(k => nameLower.includes(k))) {
-        rec.insuranceUpdated = (Number(rec.insuranceUpdated) || 0) + 1;
-        const verifiedManually = getStr(row, 'Verified Manually').toUpperCase();
-        if (verifiedManually === 'YES') {
-          rec.manualVerifications = (Number(rec.manualVerifications) || 0) + 1;
-        }
-      }
-
-      // Fax
-      if (KEYWORDS.fax.some(k => nameLower.includes(k))) {
-        rec.faxReceived = (Number(rec.faxReceived) || 0) + 1;
-        
-        // If it's a classification sheet, check specific columns
-        if (nameLower.includes('classif')) {
-          const classified = getStr(row, 'Classified').toLowerCase();
-          if (classified === 'yes') rec.faxClassified = (Number(rec.faxClassified) || 0) + 1;
-          else rec.faxClassifFailed = (Number(rec.faxClassifFailed) || 0) + 1;
-
-          const forwarded = getStr(row, 'Forwarded').toLowerCase();
-          const ecwForwarded = getStr(row, 'eCW Forwarded');
-          if (forwarded === 'yes' || (ecwForwarded !== '' && ecwForwarded.toLowerCase() !== 'no' && ecwForwarded.toLowerCase() !== 'other')) {
-            rec.faxForwarded = (Number(rec.faxForwarded) || 0) + 1;
-          } else {
-            rec.faxFwdFailed = (Number(rec.faxFwdFailed) || 0) + 1;
-          }
-        }
-        
-        // If it's a referral sheet, it also counts as a form upload
-        if (nameLower.includes('referral')) {
-          rec.formsUploadedEcw = (Number(rec.formsUploadedEcw) || 0) + 1;
-        }
-
-        // Generic upload sheet (like your new "Fax Upload")
-        if (nameLower.includes('upload')) {
-          rec.faxDocUploading = (Number(rec.faxDocUploading) || 0) + 1;
-        }
-      }
-
-      // VOB
-      if (KEYWORDS.vob.some(k => nameLower.includes(k))) {
-        if (nameLower.includes('upload') || nameLower.includes('doc')) {
-          rec.vobTotal = (Number(rec.vobTotal) || 0) + 1;
-        } else {
-          const status = getStr(row, 'Calling Status').toLowerCase();
-          if (status === 'complete') rec.vobMatched = (Number(rec.vobMatched) || 0) + 1;
-          else rec.vobUnmatched = (Number(rec.vobUnmatched) || 0) + 1;
-        }
-      }
-
-      // Duplicates
-      if (KEYWORDS.duplicate.some(k => nameLower.includes(k))) {
-        rec.duplicatesFound = (Number(rec.duplicatesFound) || 0) + 1;
-      }
-    }
+    const sheet = workbook.Sheets[sheetName];
+    if (!sheet) continue;
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' }) as Record<string, unknown>[];
+    const parsed = parseExcelData(rows);
+    allRecords.push(...parsed);
   }
 
-  return Array.from(agg.values());
+  return allRecords;
 }
 
 // ─── Legacy Excel Parser (kept for backwards compat) ────────
@@ -485,6 +366,11 @@ const CMAP: Record<string, string> = {
   'failed fax ids': 'failedFaxIds',
   'fax notes': 'faxNotes',
   'additional notes / issues': 'faxNotes',
+  'fax doc uploading': 'faxDocUploading',
+  'fax doc upload': 'faxDocUploading',
+  'doc upload': 'faxDocUploading',
+  'fax uploaded': 'faxDocUploading',
+  'upload': 'faxDocUploading',
   'vob total': 'vobTotal',
   'vob processed': 'vobTotal',
   'total processed': 'vobTotal',
@@ -541,7 +427,7 @@ export function parseExcelData(rows: Record<string, unknown>[]): ClinicalRecord[
       prFormsCorrected: 0, hhFormsCorrected: 0, formsUploadedEcw: 0, formsFailed: 0,
       faxReceived: 0, faxClassified: 0, faxClassifFailed: 0,
       faxForwarded: 0, faxFwdFailed: 0, faxRenamed: 0, faxRenFailed: 0,
-      failedFaxIds: '', faxNotes: '',
+      faxDocUploading: 0, failedFaxIds: '', faxNotes: '',
       vobTotal: 0, vobMatched: 0, vobUnmatched: 0, vobCreated: 0, vobUpdated: 0, vobFailed: 0,
     };
 
