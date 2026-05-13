@@ -286,21 +286,79 @@ function blankRecord(agent: string, date: string, clinic: string): ClinicalRecor
 
 // ─── Multi-Sheet Excel Parser ──────────────────────────────
 
-export function parseMultiSheetExcel(workbook: any): ClinicalRecord[] {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const XLSX = require('xlsx');
+export function parseMultiSheetExcel(workbook: any, XLSXLib?: any): ClinicalRecord[] {
   const allRecords: ClinicalRecord[] = [];
-  const sheetNames = Object.keys(workbook.Sheets);
+  const sheetNames = Object.keys(workbook.Sheets || {});
+  console.log('[Parser] Sheets found:', sheetNames);
 
   for (const sheetName of sheetNames) {
     const sheet = workbook.Sheets[sheetName];
     if (!sheet) continue;
-    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' }) as Record<string, unknown>[];
+
+    let rows: Record<string, unknown>[];
+    if (XLSXLib) {
+      rows = XLSXLib.utils.sheet_to_json(sheet, { defval: '' });
+    } else {
+      // Fallback: manually walk the sheet cells
+      rows = sheetToJson(sheet);
+    }
+
+    console.log(`[Parser] Sheet "${sheetName}": ${rows.length} rows, headers:`, rows.length > 0 ? Object.keys(rows[0]) : []);
     const parsed = parseExcelData(rows);
+    console.log(`[Parser] Sheet "${sheetName}": parsed ${parsed.length} records`);
     allRecords.push(...parsed);
   }
 
+  console.log('[Parser] Total records:', allRecords.length);
   return allRecords;
+}
+
+/** Minimal sheet-to-json without requiring XLSX (browser fallback) */
+function sheetToJson(sheet: any): Record<string, unknown>[] {
+  const result: Record<string, unknown>[] = [];
+  if (!sheet || !sheet['!ref']) return result;
+
+  const range = decodeRange(sheet['!ref']);
+  const headers: string[] = [];
+
+  // Read header row
+  for (let c = range.s.c; c <= range.e.c; c++) {
+    const addr = encodeCell({ r: range.s.r, c });
+    const cell = sheet[addr];
+    headers[c - range.s.c] = cell ? String(cell.v ?? '') : '';
+  }
+
+  // Read data rows
+  for (let r = range.s.r + 1; r <= range.e.r; r++) {
+    const row: Record<string, unknown> = {};
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      const addr = encodeCell({ r, c });
+      const cell = sheet[addr];
+      const header = headers[c - range.s.c];
+      if (header) row[header] = cell ? cell.v ?? '' : '';
+    }
+    result.push(row);
+  }
+  return result;
+}
+
+function decodeRange(ref: string) {
+  const parts = ref.split(':');
+  return { s: decodeCell(parts[0]), e: decodeCell(parts[1] || parts[0]) };
+}
+
+function decodeCell(addr: string) {
+  const m = addr.match(/([A-Z]+)(\d+)/);
+  if (!m) return { r: 0, c: 0 };
+  const col = m[1].split('').reduce((n, ch) => n * 26 + ch.charCodeAt(0) - 64, 0) - 1;
+  return { r: parseInt(m[2], 10) - 1, c: col };
+}
+
+function encodeCell({ r, c }: { r: number; c: number }): string {
+  let col = '';
+  let n = c + 1;
+  while (n > 0) { col = String.fromCharCode(((n - 1) % 26) + 65) + col; n = Math.floor((n - 1) / 26); }
+  return col + (r + 1);
 }
 
 // ─── Legacy Excel Parser (kept for backwards compat) ────────

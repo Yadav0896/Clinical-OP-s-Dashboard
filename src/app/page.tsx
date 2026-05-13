@@ -64,11 +64,17 @@ export default function ClinicalOpsDashboard() {
     try {
       const XLSX = await import('xlsx');
       const workbook = XLSX.read(buffer, { type: 'array' });
-      const parsed = parseMultiSheetExcel(workbook);
+      console.log('[Upload] Workbook sheets:', Object.keys(workbook.Sheets));
+      const parsed = parseMultiSheetExcel(workbook, XLSX);
+      console.log('[Upload] Parsed records:', parsed.length, parsed.slice(0, 2));
       if (parsed.length > 0) {
         setData(parsed);
         setFileName(name);
         return true;
+      } else {
+        console.warn('[Upload] No records parsed — check column headers match CMAP');
+        // Still set the file name so the user knows upload happened
+        setFileName(name + ' (0 records — check headers)');
       }
     } catch (err) {
       console.error('Failed to parse Excel:', err);
