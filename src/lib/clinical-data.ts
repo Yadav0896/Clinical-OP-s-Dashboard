@@ -293,17 +293,20 @@ export function parseMultiSheetExcel(workbook: any, XLSXLib?: any): ClinicalReco
 
   for (const sheetName of sheetNames) {
     const sheet = workbook.Sheets[sheetName];
-    if (!sheet) continue;
+    if (!sheet || !sheet['!ref']) continue;
 
+    // Each sheet has: row 0 = title, row 1 = headers, row 2+ = data
+    // We must skip the title row and use row 1 as headers
     let rows: Record<string, unknown>[];
     if (XLSXLib) {
-      rows = XLSXLib.utils.sheet_to_json(sheet, { defval: '' });
+      // Use header:1 to get raw arrays, then manually build objects using row[1] as headers
+      const raw: unknown[][] = XLSXLib.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+      rows = buildRowsFromRaw(raw);
     } else {
-      // Fallback: manually walk the sheet cells
-      rows = sheetToJson(sheet);
+      rows = sheetToJsonSkipTitle(sheet);
     }
 
-    console.log(`[Parser] Sheet "${sheetName}": ${rows.length} rows, headers:`, rows.length > 0 ? Object.keys(rows[0]) : []);
+    console.log(`[Parser] Sheet "${sheetName}": ${rows.length} rows, sample headers:`, rows.length > 0 ? Object.keys(rows[0]).slice(0, 6) : []);
     const parsed = parseExcelData(rows);
     console.log(`[Parser] Sheet "${sheetName}": parsed ${parsed.length} records`);
     allRecords.push(...parsed);
@@ -313,29 +316,49 @@ export function parseMultiSheetExcel(workbook: any, XLSXLib?: any): ClinicalReco
   return allRecords;
 }
 
-/** Minimal sheet-to-json without requiring XLSX (browser fallback) */
-function sheetToJson(sheet: any): Record<string, unknown>[] {
+/**
+ * Build row objects from a raw 2D array.
+ * row[0] = title (skip), row[1] = headers, row[2+] = data
+ */
+function buildRowsFromRaw(raw: unknown[][]): Record<string, unknown>[] {
+  if (raw.length < 3) return [];
+  const headers = (raw[1] as unknown[]).map(h => String(h ?? '').trim());
+  const result: Record<string, unknown>[] = [];
+  for (let i = 2; i < raw.length; i++) {
+    const row = raw[i] as unknown[];
+    const obj: Record<string, unknown> = {};
+    headers.forEach((h, idx) => {
+      if (h) obj[h] = row[idx] ?? '';
+    });
+    result.push(obj);
+  }
+  return result;
+}
+
+/** Fallback manual sheet-to-json that skips title row */
+function sheetToJsonSkipTitle(sheet: any): Record<string, unknown>[] {
   const result: Record<string, unknown>[] = [];
   if (!sheet || !sheet['!ref']) return result;
 
   const range = decodeRange(sheet['!ref']);
+  if (range.e.r - range.s.r < 2) return result; // need title + header + at least 1 data row
+
+  const headerRow = range.s.r + 1; // row index 1 (0-based) = actual header
   const headers: string[] = [];
 
-  // Read header row
   for (let c = range.s.c; c <= range.e.c; c++) {
-    const addr = encodeCell({ r: range.s.r, c });
+    const addr = encodeCell({ r: headerRow, c });
     const cell = sheet[addr];
-    headers[c - range.s.c] = cell ? String(cell.v ?? '') : '';
+    headers[c - range.s.c] = cell ? String(cell.v ?? '').trim() : '';
   }
 
-  // Read data rows
-  for (let r = range.s.r + 1; r <= range.e.r; r++) {
+  for (let r = headerRow + 1; r <= range.e.r; r++) {
     const row: Record<string, unknown> = {};
     for (let c = range.s.c; c <= range.e.c; c++) {
       const addr = encodeCell({ r, c });
       const cell = sheet[addr];
       const header = headers[c - range.s.c];
-      if (header) row[header] = cell ? cell.v ?? '' : '';
+      if (header) row[header] = cell ? (cell.v ?? '') : '';
     }
     result.push(row);
   }
@@ -370,10 +393,18 @@ function normalizeHeader(header: string): string {
 }
 
 const CMAP: Record<string, string> = {
+  // ── Identity columns (used as grouping keys) ──────────────
   'date': 'date',
+  'date of call': 'date',         // VOB Agent Calls sheet
   'agent': 'agent',
+  'person name': 'agent',         // All sheets use "Person Name"
+  'individual name': 'agent',
+  'name': 'agent',
   'clinic': 'clinic',
+  'client': 'clinic',             // All sheets use "Client"
   'shift': 'shift',
+
+  // ── Scheduling ────────────────────────────────────────────
   'scheduling total': 'schedTotal',
   'scheduling cancelled': 'schedCancel',
   'scheduling cancel': 'schedCancel',
@@ -390,8 +421,12 @@ const CMAP: Record<string, string> = {
   'chatbot bookings': 'botBookings',
   'gender validated': 'genderValidated',
   'gender validated %': 'genderValidated',
+
+  // ── Duplicates ────────────────────────────────────────────
   'duplicates found': 'duplicatesFound',
   'duplicates': 'duplicatesFound',
+
+  // ── Insurance ─────────────────────────────────────────────
   'hmo flagged': 'hmoFlagged',
   'hmo/epo flagged': 'hmoFlagged',
   'insurance updated': 'insuranceUpdated',
@@ -406,7 +441,10 @@ const CMAP: Record<string, string> = {
   'direct in info section': 'insuranceDirect',
   'manual verifications': 'manualVerifications',
   'manual verification': 'manualVerifications',
+  'verified manually': 'manualVerifications',  // Insurance Validation sheet
   'vob csv uploaded': 'vobCsvUploaded',
+
+  // ── Patient Intake ────────────────────────────────────────
   'pr forms corrected': 'prFormsCorrected',
   'pr corrected': 'prFormsCorrected',
   'hh forms corrected': 'hhFormsCorrected',
@@ -414,26 +452,34 @@ const CMAP: Record<string, string> = {
   'forms uploaded in ecw': 'formsUploadedEcw',
   'forms uploaded': 'formsUploadedEcw',
   'forms failed': 'formsFailed',
+
+  // ── Fax ───────────────────────────────────────────────────
   'fax received': 'faxReceived',
   'fax classified': 'faxClassified',
+  'classified': 'faxClassified',              // Fax Classification sheet
   'fax classif failed': 'faxClassifFailed',
   'fax forwarded': 'faxForwarded',
+  'forwarded': 'faxForwarded',                // Fax Classification sheet
+  'ecw forwarded': 'faxForwarded',            // Fax Classification sheet
   'fax fwd failed': 'faxFwdFailed',
   'fax renamed': 'faxRenamed',
+  'ecw renamed': 'faxRenamed',                // Fax Classification sheet
   'fax ren failed': 'faxRenFailed',
-  'failed fax ids': 'failedFaxIds',
-  'fax notes': 'faxNotes',
-  'additional notes / issues': 'faxNotes',
   'fax doc uploading': 'faxDocUploading',
   'fax doc upload': 'faxDocUploading',
   'doc upload': 'faxDocUploading',
-  'fax uploaded': 'faxDocUploading',
-  'upload': 'faxDocUploading',
+  'failed fax ids': 'failedFaxIds',
+  'fax notes': 'faxNotes',
+  'additional notes / issues': 'faxNotes',
+
+  // ── VOB ───────────────────────────────────────────────────
   'vob total': 'vobTotal',
   'vob processed': 'vobTotal',
   'total processed': 'vobTotal',
   'vob matched': 'vobMatched',
   'successful matches': 'vobMatched',
+  'calling status': 'vobMatched',             // VOB Agent Calls: 'Complete' = matched
+  'vob doc on ecw?': 'vobTotal',              // VOB Doc Upload sheet — each row = 1 VOB
   'vob unmatched': 'vobUnmatched',
   'vob created': 'vobCreated',
   'vob updated': 'vobUpdated',
@@ -454,69 +500,110 @@ function parseString(val: unknown): string {
 export function parseExcelData(rows: Record<string, unknown>[]): ClinicalRecord[] {
   if (!rows || rows.length === 0) return [];
 
-  const STRING_FIELDS = new Set<string>(['date', 'agent', 'clinic', 'shift', 'genderValidated', 'failedFaxIds', 'faxNotes']);
+  // ── Detect which sheet type this is based on available columns ───────────
+  const allKeys = Object.keys(rows[0]).map(k => k.toLowerCase().trim());
+  const hasCol = (name: string) => allKeys.includes(name.toLowerCase().trim());
 
-  // Build header map from first row
-  const headerMap = new Map<string, string>();
-  const rawHeaders = Object.keys(rows[0]);
+  const isScheduling      = hasCol('visit type') || hasCol('appointment date');
+  const isPatientReg      = hasCol('field checked') && !hasCol('health history');
+  const isHealthHistory   = hasCol('field checked') && !hasCol('visit type');
+  const isDuplicate       = hasCol('duplicate patient name') || hasCol('merged');
+  const isInsurance       = hasCol('eligibility status') || hasCol('verified manually');
+  const isVobDoc          = hasCol('vob doc on ecw?') || hasCol('vob date');
+  const isVobAgent        = hasCol('calling status') || hasCol('date of call');
+  const isFaxClass        = hasCol('classified') || hasCol('fax last 6 digits');
+  const isFaxReferral     = hasCol('fax receipt date') || hasCol('fax / document');
+  // Any other unknown sheet type falls through to the generic "fax doc upload" counter below
 
-  for (const rawHeader of rawHeaders) {
-    const normalized = normalizeHeader(rawHeader);
-    const mapped = CMAP[normalized];
-    if (mapped) {
-      headerMap.set(rawHeader, mapped);
+  // ── Aggregation map: key = "PersonName::date::clinic" ────────────────────
+  const agg = new Map<string, ClinicalRecord>();
+
+  const getStr = (row: Record<string, unknown>, ...keys: string[]): string => {
+    for (const k of keys) {
+      const found = Object.keys(row).find(rk => rk.toLowerCase().trim() === k.toLowerCase());
+      if (found) {
+        const v = String(row[found] ?? '').trim();
+        if (v) return v;
+      }
     }
-  }
-
-  const records: ClinicalRecord[] = [];
+    return '';
+  };
 
   for (const row of rows) {
     if (!row) continue;
 
-    const firstVal = Object.values(row)[0];
-    if (!firstVal || firstVal === '') continue;
+    // Get person name
+    const person = getStr(row, 'Person Name', 'Individual Name', 'Agent', 'Name');
+    if (!person) continue;
 
-    const record: Record<string, unknown> = {
-      date: '', agent: '', clinic: '', shift: '', genderValidated: '',
-      schedTotal: 0, schedCancel: 0, newPatients: 0, followUp: 0,
-      adminBookings: 0, botBookings: 0, duplicatesFound: 0, hmoFlagged: 0,
-      insuranceUpdated: 0, cardsUploaded: 0, insuranceNotes: 0, insuranceDirect: 0,
-      manualVerifications: 0, vobCsvUploaded: 0,
-      prFormsCorrected: 0, hhFormsCorrected: 0, formsUploadedEcw: 0, formsFailed: 0,
-      faxReceived: 0, faxClassified: 0, faxClassifFailed: 0,
-      faxForwarded: 0, faxFwdFailed: 0, faxRenamed: 0, faxRenFailed: 0,
-      faxDocUploading: 0, failedFaxIds: '', faxNotes: '',
-      vobTotal: 0, vobMatched: 0, vobUnmatched: 0, vobCreated: 0, vobUpdated: 0, vobFailed: 0,
-    };
+    // Get date
+    let rawDate = isVobAgent
+      ? getStr(row, 'Date of Call', 'Date')
+      : getStr(row, 'Date');
 
-    for (const [rawHeader, field] of headerMap.entries()) {
-      const val = row[rawHeader];
-      if (STRING_FIELDS.has(field)) {
-        record[field] = parseString(val);
-      } else {
-        record[field] = parseNumber(val);
-      }
+    let date = parseDateValue(rawDate);
+    if (!date) {
+      const month = getStr(row, 'Month');
+      if (month) date = monthToDate(month);
     }
+    if (!date) continue;
 
-    // Format date
-    if (record.date) {
-      try {
-        const d = new Date(record.date as string);
-        if (!isNaN(d.getTime())) {
-          record.date = d.toISOString().split('T')[0];
-        }
-      } catch {
-        // keep as-is
-      }
+    // Get clinic
+    const rawClinic = getStr(row, 'Client', 'Clinic');
+    const clinic = normalizeClinic(rawClinic) || AGENT_CLINIC[person] || 'Denver Allergy';
+
+    // Upsert aggregated record
+    const k = `${person}::${date}::${clinic}`;
+    if (!agg.has(k)) {
+      agg.set(k, blankRecord(person, date, clinic));
     }
+    const rec = agg.get(k)!;
 
-    if ((record.date as string) || (record.agent as string)) {
-      records.push(record as unknown as ClinicalRecord);
+    // ── Count based on sheet type ─────────────────────────────────────────
+    if (isScheduling) {
+      rec.schedTotal += 1;
+      const status = getStr(row, 'Status', 'ecw status').toLowerCase();
+      if (status === 'cancelled' || status === 'cancel') rec.schedCancel += 1;
+    } else if (isPatientReg || isHealthHistory) {
+      if (isPatientReg) rec.prFormsCorrected += 1;
+      else rec.hhFormsCorrected += 1;
+    } else if (isDuplicate) {
+      rec.duplicatesFound += 1;
+    } else if (isInsurance) {
+      rec.insuranceUpdated += 1;
+      const manual = getStr(row, 'Verified Manually').toUpperCase();
+      if (manual === 'YES') rec.manualVerifications += 1;
+    } else if (isVobDoc) {
+      rec.vobTotal += 1;
+      const uploaded = getStr(row, 'VOB DOC on ECW?', 'VOB Doc on ECW?').toLowerCase();
+      if (uploaded === 'yes') rec.vobMatched += 1;
+      else rec.vobUnmatched += 1;
+    } else if (isVobAgent) {
+      rec.vobTotal += 1;
+      const status = getStr(row, 'Calling Status').toLowerCase();
+      if (status === 'complete') rec.vobMatched += 1;
+      else rec.vobUnmatched += 1;
+    } else if (isFaxClass) {
+      rec.faxReceived += 1;
+      const classified = getStr(row, 'Classified').toLowerCase();
+      if (classified === 'yes') rec.faxClassified += 1;
+      else rec.faxClassifFailed += 1;
+      const forwarded = getStr(row, 'Forwarded', 'eCW Forwarded').toLowerCase();
+      if (forwarded === 'yes') rec.faxForwarded += 1;
+      const renamed = getStr(row, 'eCW Renamed').toLowerCase();
+      if (renamed === 'yes') rec.faxRenamed += 1;
+    } else if (isFaxReferral) {
+      rec.faxReceived += 1;
+      rec.formsUploadedEcw += 1;
+    } else {
+      // Generic sheet fallback — any new sheet = count as fax doc upload
+      rec.faxDocUploading += 1;
     }
   }
 
-  return records;
+  return Array.from(agg.values());
 }
+
 
 // ─── Dummy Data Generator (fallback only) ──────────────────
 
