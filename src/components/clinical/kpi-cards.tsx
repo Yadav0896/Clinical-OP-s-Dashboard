@@ -65,7 +65,10 @@ export function KpiCards({ data }: KpiCardsProps) {
       value: metrics.topAgent.split(' ')[0], 
       sub: `${metrics.topScore.toLocaleString()} score` 
     },
-    fax: { value: `${metrics.faxRate}%`, sub: 'Classified rate' },
+    fax: { 
+      value: `${metrics.faxRate}%`, 
+      sub: `${metrics.faxClassified}/${metrics.faxReceived} classified` 
+    },
     vob: { 
       value: `${metrics.vobDocMatched}/${metrics.vobDocTotal}`, 
       sub: `${metrics.vobRate}% match` 

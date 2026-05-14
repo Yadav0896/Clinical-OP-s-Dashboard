@@ -14,7 +14,6 @@ import { TrendChart } from '@/components/clinical/trend-chart';
 import { IndividualTable } from '@/components/clinical/individual-table';
 import { IndividualPerformanceTab } from '@/components/clinical/individual-performance-tab';
 import { EodGeneratorTab } from '@/components/clinical/eod-generator-tab';
-import { FaxVobTab } from '@/components/clinical/fax-vob-tab';
 import {
   generateDummyData,
   parseMultiSheetExcel,
@@ -396,7 +395,6 @@ export default function ClinicalOpsDashboard() {
     { id: 'dashboard', label: 'Dashboard', icon: <BarChart3 size={15} /> },
     { id: 'agents', label: 'Individual Performance', icon: <Users size={15} /> },
     { id: 'eod', label: 'EOD Generator', icon: <FileText size={15} /> },
-    { id: 'fax-vob', label: 'Fax & VOB', icon: <Printer size={15} /> },
   ] as const;
 
   // ─── Data Source Badge ─────────────────────────────────
@@ -585,11 +583,6 @@ export default function ClinicalOpsDashboard() {
           {/* EOD Generator Tab */}
           <TabsContent value="eod" className="animate-fade-in">
             <EodGeneratorTab data={filteredData} />
-          </TabsContent>
-
-          {/* Fax & VOB Tab */}
-          <TabsContent value="fax-vob" className="animate-fade-in">
-            <FaxVobTab data={filteredData} />
           </TabsContent>
         </Tabs>
       </main>
