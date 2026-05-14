@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Activity, Users, TrendingUp, Award, Printer, FileCheck } from 'lucide-react';
+import { Activity, Users, TrendingUp, Award, Printer } from 'lucide-react';
 import type { ClinicalRecord } from '@/lib/clinical-data';
 import { totalTasks, getAgentSummaries } from '@/lib/clinical-data';
 
@@ -16,7 +16,6 @@ const CARDS = [
   { label: 'Avg Tasks/Day', key: 'avg', accent: '#A855F7', icon: TrendingUp },
   { label: 'Top Performer', key: 'top', accent: '#22C55E', icon: Award },
   { label: 'Fax Success Rate', key: 'fax', accent: '#F59E0B', icon: Printer },
-  { label: 'VOB Match Rate', key: 'vob', accent: '#EF4444', icon: FileCheck },
 ] as const;
 
 export function KpiCards({ data }: KpiCardsProps) {
@@ -35,11 +34,6 @@ export function KpiCards({ data }: KpiCardsProps) {
     const faxClassified = data.reduce((s, r) => s + r.faxClassified, 0);
     const faxRate = faxReceived > 0 ? Math.round((faxClassified / faxReceived) * 100) : 0;
 
-    // VOB Match Rate: using only VOB Doc Upload sheet
-    const vobDocTotal = data.reduce((s, r) => s + r.vobDocTotal, 0);
-    const vobDocMatched = data.reduce((s, r) => s + r.vobDocMatched, 0);
-    const vobRate = vobDocTotal > 0 ? Math.round((vobDocMatched / vobDocTotal) * 100) : 0;
-
     return {
       total,
       agents: uniqueAgents.size,
@@ -50,9 +44,6 @@ export function KpiCards({ data }: KpiCardsProps) {
       faxRate,
       faxReceived,
       faxClassified,
-      vobRate,
-      vobDocTotal,
-      vobDocMatched,
       summaries,
     };
   }, [data]);
@@ -69,14 +60,10 @@ export function KpiCards({ data }: KpiCardsProps) {
       value: `${metrics.faxRate}%`, 
       sub: `${metrics.faxClassified}/${metrics.faxReceived} classified` 
     },
-    vob: { 
-      value: `${metrics.vobDocMatched}/${metrics.vobDocTotal}`, 
-      sub: `${metrics.vobRate}% match` 
-    },
   };
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
       {CARDS.map(card => {
         const Icon = card.icon;
         const v = values[card.key];

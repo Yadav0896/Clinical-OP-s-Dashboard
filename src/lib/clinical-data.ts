@@ -93,19 +93,8 @@ const AGENT_CLINIC: Record<string, string> = {
 
 // ─── Helper Functions ──────────────────────────────────────
 
-const NUMERIC_FIELDS: (keyof ClinicalRecord)[] = [
-  'schedTotal', 'schedCancel', 'newPatients', 'followUp',
-  'adminBookings', 'botBookings', 'duplicatesFound', 'hmoFlagged',
-  'insuranceUpdated', 'cardsUploaded', 'insuranceNotes', 'insuranceDirect',
-  'manualVerifications', 'vobCsvUploaded',
-  'prFormsCorrected', 'hhFormsCorrected', 'formsUploadedEcw', 'formsFailed',
-  'faxReceived', 'faxClassified', 'faxClassifFailed',
-  'faxForwarded', 'faxFwdFailed', 'faxRenamed', 'faxRenFailed', 'faxDocUploading',
-  'vobTotal', 'vobMatched', 'vobUnmatched', 'vobCreated', 'vobUpdated', 'vobFailed',
-];
-
 export function totalTasks(r: ClinicalRecord): number {
-  return NUMERIC_FIELDS.reduce((sum, field) => sum + Number(r[field] || 0), 0);
+  return MOD_NAMES.reduce((sum, m) => sum + modTasks(r, m), 0);
 }
 
 export function modTasks(r: ClinicalRecord, mod: string): number {
