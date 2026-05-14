@@ -11,7 +11,7 @@ interface ModuleCardsProps {
 
 const MODULE_SUBS: Record<string, string> = {
   'Patient Intake': 'PR + HH corrections',
-  'Insurance': 'Verify + Update + VOB',
+  'Insurance': 'Verify + Update',
   'Scheduling': 'Corrections + Duplicates',
   'Fax': 'Classify + Forward',
   'VOB': 'Match + Create + Update',

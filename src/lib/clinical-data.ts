@@ -114,9 +114,9 @@ export function modTasks(r: ClinicalRecord, mod: string): number {
       // ONLY PR + HH forms corrected (exclude formsFailed, formsUploadedEcw)
       return r.prFormsCorrected + r.hhFormsCorrected;
     case 'Insurance':
-      // Insurance Validation tasks + VOB tasks (VOB Doc + VOB Agent) per spec
+      // Pure Insurance Validation tasks only (separated from VOB per spec)
       return r.insuranceUpdated + r.cardsUploaded + r.insuranceNotes +
-        r.insuranceDirect + r.manualVerifications + r.vobCsvUploaded + r.vobTotal;
+        r.insuranceDirect + r.manualVerifications;
     case 'Scheduling':
       // Total + New + Follow-Up + Duplicate Patients
       return r.schedTotal + r.newPatients + r.followUp + r.duplicatesFound;
