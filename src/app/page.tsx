@@ -336,27 +336,27 @@ export default function ClinicalOpsDashboard() {
         console.error('IndexedDB save failed:', err);
       }
 
-      // Also try uploading to server (for self-hosted deployments)
-      try {
+      // Also try uploading to server asynchronously without blocking UI updates
+      setTimeout(() => {
         const formData = new FormData();
         formData.append('file', file);
 
-        const uploadRes = await fetch('/api/excel-upload', {
+        fetch('/api/excel-upload', {
           method: 'POST',
           body: formData,
-        });
-
-        if (uploadRes.ok) {
-          const uploadData = await uploadRes.json();
-          // If server upload succeeded, reset hash for server polling
-          liveHashRef.current = uploadData.hash || hash;
-          setLiveHash(uploadData.hash || hash);
-          setDataSource('server');
-        }
-      } catch (err) {
-        // Server upload failed (expected on Vercel) — IndexedDB is the fallback
-        console.log('[Upload] Server upload skipped (client-only mode)');
-      }
+        })
+          .then(res => res.json())
+          .then(uploadData => {
+            if (uploadData?.hash) {
+              liveHashRef.current = uploadData.hash;
+              setLiveHash(uploadData.hash);
+              setDataSource('server');
+            }
+          })
+          .catch(() => {
+            console.log('[Upload] Server upload skipped (client-only mode)');
+          });
+      }, 0);
 
       setSyncCount(prev => prev + 1);
     } catch (err) {

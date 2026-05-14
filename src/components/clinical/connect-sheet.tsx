@@ -31,6 +31,7 @@ interface ConnectSheetProps {
   onGoogleSheetConnect?: (url: string) => void;
   onGoogleSheetDisconnect?: () => void;
   dataSource?: string;
+  onClear?: () => void;
 }
 
 const EXPECTED_SHEETS = [
@@ -45,6 +46,7 @@ export function ConnectSheet({
   onGoogleSheetConnect,
   onGoogleSheetDisconnect,
   dataSource,
+  onClear,
 }: ConnectSheetProps) {
   const [open, setOpen] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
@@ -71,35 +73,19 @@ export function ConnectSheet({
   }, []);
 
   const handleFileUpload = async (file: File) => {
-    setUploadStatus('uploading');
-    try {
-      // Clear Google Sheets config so reload doesn't revert to it
-      try {
-        await clearGoogleSheetUrl();
-      } catch {
-        // Ignore — Google Sheets may not have been configured
-      }
+    // Instantly dispatch to parent to parse and render immediately
+    onUpload(file);
+    setUploadStatus('success');
+    setTimeout(() => {
+      setUploadStatus('idle');
+      setOpen(false);
+    }, 200);
 
-      // Try server upload
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        await fetch('/api/excel-upload', { method: 'POST', body: formData });
-      } catch {
-        // Server not available — OK (Vercel)
-      }
-
-      setUploadStatus('success');
-      onUpload(file);
-
-      setTimeout(() => {
-        setUploadStatus('idle');
-        setOpen(false);
-      }, 1500);
-    } catch {
-      setUploadStatus('error');
-      setTimeout(() => setUploadStatus('idle'), 3000);
-    }
+    // Synchronize storage and APIs asynchronously in the background
+    clearGoogleSheetUrl().catch(() => {});
+    const formData = new FormData();
+    formData.append('file', file);
+    fetch('/api/excel-upload', { method: 'POST', body: formData }).catch(() => {});
   };
 
   const handleGoogleSheetConnect = async () => {
@@ -176,28 +162,34 @@ export function ConnectSheet({
 
   const handleGoogleSheetDisconnect = async () => {
     setGsDisconnecting(true);
+    onClear?.();
+    onGoogleSheetDisconnect?.();
+    setSavedGsUrl(null);
+    setGsUrl('');
+    setTimeout(() => {
+      setGsDisconnecting(false);
+      setOpen(false);
+    }, 150);
+
+    clearGoogleSheetUrl().catch(() => {});
     try {
-      await clearGoogleSheetUrl();
-      setSavedGsUrl(null);
-      setGsUrl('');
-      onGoogleSheetDisconnect?.();
-      window.location.reload();
-    } catch (err) {
-      console.error('Failed to disconnect:', err);
-    }
-    setGsDisconnecting(false);
+      localStorage.clear();
+    } catch {}
   };
 
   const handleClearStored = async () => {
     setClearing(true);
+    onClear?.();
+    setStoredMeta(null);
+    setTimeout(() => {
+      setClearing(false);
+      setOpen(false);
+    }, 150);
+
+    clearStoredFile().catch(() => {});
     try {
-      await clearStoredFile();
-      setStoredMeta(null);
-      window.location.reload();
-    } catch (err) {
-      console.error('Failed to clear stored file:', err);
-    }
-    setClearing(false);
+      localStorage.clear();
+    } catch {}
   };
 
   const isVercel = typeof window !== 'undefined' && (
