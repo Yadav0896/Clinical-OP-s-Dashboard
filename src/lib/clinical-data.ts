@@ -145,6 +145,14 @@ function parseDateValue(val: unknown): string {
   const str = String(val).trim();
   if (!str) return '';
 
+  // Stringified Excel serial date number (e.g. "46156")
+  if (/^\d+$/.test(str)) {
+    const serial = parseInt(str, 10);
+    if (serial > 25569 && serial < 100000) {
+      return excelSerialToDate(serial);
+    }
+  }
+
   // "MM/DD/YYYY"
   const mdy = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (mdy) {
