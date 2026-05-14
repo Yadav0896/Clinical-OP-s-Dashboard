@@ -569,45 +569,61 @@ export function parseExcelData(rows: Record<string, unknown>[], sheetNameInput?:
     }
     const rec = agg.get(k)!;
 
-    // ── Count based on sheet type ─────────────────────────────────────────
-    if (isScheduling) {
-      rec.schedTotal += 1;
-      const status = getStr(row, 'Status', 'ecw status').toLowerCase();
-      if (status === 'cancelled' || status === 'cancel') rec.schedCancel += 1;
-    } else if (isPatientReg || isHealthHistory) {
-      if (isPatientReg) rec.prFormsCorrected += 1;
-      else rec.hhFormsCorrected += 1;
-    } else if (isDuplicate) {
-      rec.duplicatesFound += 1;
-    } else if (isInsurance) {
-      rec.insuranceUpdated += 1;
-      const manual = getStr(row, 'Verified Manually').toUpperCase();
-      if (manual === 'YES') rec.manualVerifications += 1;
-    } else if (isVobDoc) {
-      rec.vobTotal += 1;
-      const uploaded = getStr(row, 'VOB DOC on ECW?', 'VOB Doc on ECW?').toLowerCase();
-      if (uploaded === 'yes') rec.vobMatched += 1;
-      else rec.vobUnmatched += 1;
-    } else if (isVobAgent) {
-      rec.vobTotal += 1;
-      const status = getStr(row, 'Calling Status').toLowerCase();
-      if (status === 'complete') rec.vobMatched += 1;
-      else rec.vobUnmatched += 1;
-    } else if (isFaxClass) {
-      rec.faxReceived += 1;
-      const classified = getStr(row, 'Classified').toLowerCase();
-      if (classified === 'yes') rec.faxClassified += 1;
-      else rec.faxClassifFailed += 1;
-      const forwarded = getStr(row, 'Forwarded', 'eCW Forwarded').toLowerCase();
-      if (forwarded === 'yes') rec.faxForwarded += 1;
-      const renamed = getStr(row, 'eCW Renamed').toLowerCase();
-      if (renamed === 'yes') rec.faxRenamed += 1;
-    } else if (isFaxReferral) {
-      rec.faxReceived += 1;
-      rec.formsUploadedEcw += 1;
-    } else {
-      // Generic sheet fallback — any new sheet = count as fax doc upload
-      rec.faxDocUploading += 1;
+    // Cross-check: Verify if row contains pre-aggregated explicit summary numeric counts via CMAP mapping
+    let hasExplicitSummaryColumns = false;
+    for (const [rowKey, rowVal] of Object.entries(row)) {
+      const normalized = normalizeHeader(rowKey);
+      const mappedField = CMAP[normalized] as keyof ClinicalRecord | undefined;
+      if (mappedField && mappedField !== 'date' && mappedField !== 'agent' && mappedField !== 'clinic' && mappedField !== 'shift') {
+        const num = parseNumber(rowVal);
+        if (num > 0) {
+          hasExplicitSummaryColumns = true;
+          (rec[mappedField] as number) += num;
+        }
+      }
+    }
+
+    // ── Count based on sheet type (applied if explicit summary columns are absent) ──
+    if (!hasExplicitSummaryColumns) {
+      if (isScheduling) {
+        rec.schedTotal += 1;
+        const status = getStr(row, 'Status', 'ecw status').toLowerCase();
+        if (status === 'cancelled' || status === 'cancel') rec.schedCancel += 1;
+      } else if (isPatientReg || isHealthHistory) {
+        if (isPatientReg) rec.prFormsCorrected += 1;
+        else rec.hhFormsCorrected += 1;
+      } else if (isDuplicate) {
+        rec.duplicatesFound += 1;
+      } else if (isInsurance) {
+        rec.insuranceUpdated += 1;
+        const manual = getStr(row, 'Verified Manually').toUpperCase();
+        if (manual === 'YES') rec.manualVerifications += 1;
+      } else if (isVobDoc) {
+        rec.vobTotal += 1;
+        const uploaded = getStr(row, 'VOB DOC on ECW?', 'VOB Doc on ECW?').toLowerCase();
+        if (uploaded === 'yes') rec.vobMatched += 1;
+        else rec.vobUnmatched += 1;
+      } else if (isVobAgent) {
+        rec.vobTotal += 1;
+        const status = getStr(row, 'Calling Status').toLowerCase();
+        if (status === 'complete') rec.vobMatched += 1;
+        else rec.vobUnmatched += 1;
+      } else if (isFaxClass) {
+        rec.faxReceived += 1;
+        const classified = getStr(row, 'Classified').toLowerCase();
+        if (classified === 'yes') rec.faxClassified += 1;
+        else rec.faxClassifFailed += 1;
+        const forwarded = getStr(row, 'Forwarded', 'eCW Forwarded').toLowerCase();
+        if (forwarded === 'yes') rec.faxForwarded += 1;
+        const renamed = getStr(row, 'eCW Renamed').toLowerCase();
+        if (renamed === 'yes') rec.faxRenamed += 1;
+      } else if (isFaxReferral) {
+        rec.faxReceived += 1;
+        rec.formsUploadedEcw += 1;
+      } else {
+        // Generic sheet fallback — any new sheet = count as fax doc upload
+        rec.faxDocUploading += 1;
+      }
     }
   }
 
