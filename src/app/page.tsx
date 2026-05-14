@@ -410,19 +410,19 @@ export default function ClinicalOpsDashboard() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
+    <div className="min-h-screen flex flex-col bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-teal-50/50 via-slate-50 to-white">
       {/* ─── Header ───────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-slate-200">
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200/60 shadow-xs">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-teal-600 flex items-center justify-center font-bold text-white text-sm shadow-sm">
+          <div className="flex items-center gap-3.5">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-teal-600 to-emerald-500 flex items-center justify-center font-bold text-white text-sm shadow-md ring-2 ring-teal-500/20 transition-transform duration-300 hover:scale-105">
               RA
             </div>
             <div>
-              <h1 className="text-lg font-bold text-slate-800 leading-tight">
+              <h1 className="text-lg font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-slate-900 via-slate-800 to-teal-950 leading-tight tracking-tight">
                 Clinical Ops Tracker
               </h1>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] font-medium text-slate-400">
                 Manual Team Performance Dashboard
               </p>
             </div>
@@ -510,27 +510,27 @@ export default function ClinicalOpsDashboard() {
         </div>
 
         {/* Status Banner */}
-        <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-4 py-2.5 mb-5 shadow-sm">
-          <CheckCircle size={16} className="text-teal-500 flex-shrink-0" />
-          <span className="text-sm text-slate-500">
-            <strong className="text-slate-700">
+        <div className="flex items-center gap-2.5 bg-white/90 backdrop-blur-xs border border-slate-200/80 rounded-xl px-4 py-3 mb-6 shadow-xs hover:border-teal-200/60 transition-all">
+          <CheckCircle size={16} className="text-teal-600 flex-shrink-0 animate-pulse" />
+          <span className="text-xs text-slate-500">
+            <strong className="text-slate-800 font-semibold">
               {fileName || 'Demo Data'}
             </strong>
             {' — '}
-            {filteredData.length.toLocaleString()} records loaded
+            <span className="font-medium text-slate-600">{filteredData.length.toLocaleString()} records loaded</span>
             {fileName && ` · ${data.length} total`}
           </span>
           {dataSource && dataSource !== 'demo' && (
             <>
-              <span className="mx-1 text-slate-300">|</span>
-              <span className="text-xs text-slate-400 font-medium">
+              <span className="mx-1 text-slate-200">|</span>
+              <span className="text-[11px] text-slate-400 font-medium tracking-wide uppercase">
                 {dataSourceLabel()}
               </span>
             </>
           )}
           {isLive && (
             <>
-              <span className="mx-1 text-slate-300">|</span>
+              <span className="mx-1 text-slate-200">|</span>
               <Radio size={14} className="text-emerald-500 flex-shrink-0" />
               <span className="text-xs text-emerald-600 font-medium">
                 Real-time sync active
@@ -539,7 +539,7 @@ export default function ClinicalOpsDashboard() {
           )}
           {deploymentMode === 'vercel' && (
             <>
-              <span className="mx-1 text-slate-300">|</span>
+              <span className="mx-1 text-slate-200">|</span>
               <Cloud size={14} className="text-blue-400 flex-shrink-0" />
               <span className="text-xs text-blue-500 font-medium">
                 Vercel
@@ -550,12 +550,12 @@ export default function ClinicalOpsDashboard() {
 
         {/* ─── Tabs ──────────────────────────────────────── */}
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="bg-white border border-slate-200 rounded-xl p-1 mb-5 h-auto w-fit shadow-sm">
+          <TabsList className="bg-white/90 backdrop-blur-xs border border-slate-200/80 rounded-xl p-1.5 mb-6 h-auto w-fit shadow-xs">
             {tabs.map(tab => (
               <TabsTrigger
                 key={tab.id}
                 value={tab.id}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium data-[state=active]:bg-teal-600 data-[state=active]:text-white data-[state=active]:shadow-sm text-slate-500 data-[state=inactive]:hover:text-slate-700 data-[state=inactive]:hover:bg-slate-50 transition-all"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-600 data-[state=active]:to-teal-500 data-[state=active]:text-white data-[state=active]:shadow-sm text-slate-500 data-[state=inactive]:hover:text-slate-800 data-[state=inactive]:hover:bg-slate-50 transition-all duration-300"
               >
                 {tab.icon}
                 {tab.label}

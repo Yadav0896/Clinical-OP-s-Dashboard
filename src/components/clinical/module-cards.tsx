@@ -32,7 +32,7 @@ export function ModuleCards({ data }: ModuleCardsProps) {
       {moduleTotals.map(m => (
         <Card
           key={m.name}
-          className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+          className="bg-white/95 backdrop-blur-xs border border-slate-200/80 rounded-xl overflow-hidden shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 group"
         >
           <CardContent className="p-4 flex gap-3">
             <div className="w-1 rounded-full flex-shrink-0" style={{ background: m.color }} />

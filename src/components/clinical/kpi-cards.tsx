@@ -70,7 +70,7 @@ export function KpiCards({ data }: KpiCardsProps) {
         return (
           <Card
             key={card.key}
-            className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+            className="bg-white/95 backdrop-blur-xs border border-slate-200/80 rounded-xl overflow-hidden shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 group"
           >
             <div className="h-[3px]" style={{ background: card.accent }} />
             <CardContent className="p-4">
