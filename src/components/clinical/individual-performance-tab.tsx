@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Award, Calculator } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -64,8 +65,19 @@ function getMonthLabel(dateStr: string): string {
 
 export function IndividualPerformanceTab({ data }: AgentPerformanceTabProps) {
   const [timeframe, setTimeframe] = useState<string>('total');
+  const [localDateFrom, setLocalDateFrom] = useState<string>('');
+  const [localDateTo, setLocalDateTo] = useState<string>('');
 
-  const summaries = useMemo(() => getAgentSummaries(data), [data]);
+  const performanceData = useMemo(() => {
+    return data.filter(r => {
+      if (!r.date) return true;
+      if (localDateFrom && r.date < localDateFrom) return false;
+      if (localDateTo && r.date > localDateTo) return false;
+      return true;
+    });
+  }, [data, localDateFrom, localDateTo]);
+
+  const summaries = useMemo(() => getAgentSummaries(performanceData), [performanceData]);
   const maxTotal = summaries[0]?.total || 1;
 
   const stackedData = useMemo(() => {
@@ -81,18 +93,18 @@ export function IndividualPerformanceTab({ data }: AgentPerformanceTabProps) {
   }, [summaries]);
 
   const dateRangeLabel = useMemo(() => {
-    const dates = data.map(r => r.date).filter(Boolean).sort();
+    const dates = performanceData.map(r => r.date).filter(Boolean).sort();
     if (dates.length === 0) return 'All Dates';
     const min = dates[0];
     const max = dates[dates.length - 1];
     if (min === max) return min;
     return `${min} to ${max}`;
-  }, [data]);
+  }, [performanceData]);
 
   const scoreRows = useMemo(() => {
     const map = new Map<string, ScoreRow>();
 
-    for (const r of data) {
+    for (const r of performanceData) {
       const agent = r.agent || 'Unknown';
       const dateStr = r.date || 'Unknown';
 
@@ -283,29 +295,62 @@ export function IndividualPerformanceTab({ data }: AgentPerformanceTabProps) {
 
       {/* Performance Calculation Score Table */}
       <Card className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <CardHeader className="pb-3 pt-5 px-5 bg-slate-50/50 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <CardTitle className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-              <Calculator size={16} className="text-teal-600" />
-              Performance Scoring Engine
-            </CardTitle>
-            <p className="text-[11px] text-slate-500 mt-1">
-              Formula: <span className="font-medium text-slate-700">Intake × 5</span> + <span className="font-medium text-slate-700">Scheduling × 4</span> + <span className="font-medium text-slate-700">Insurance × 3</span> + <span className="font-medium text-slate-700">VOB Docs × 3</span> + <span className="font-medium text-slate-700">Fax × 1</span>
-            </p>
-          </div>
-          <div className="flex items-center gap-2 self-end sm:self-auto">
-            <span className="text-xs text-slate-500 font-medium">Timeframe:</span>
-            <Select value={timeframe} onValueChange={setTimeframe}>
-              <SelectTrigger className="w-[140px] h-8 text-xs bg-white border-slate-200 font-medium text-teal-700">
-                <SelectValue placeholder="Select" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="total" className="font-semibold text-teal-800">Total Period</SelectItem>
-                <SelectItem value="daily">Daily</SelectItem>
-                <SelectItem value="weekly">Weekly</SelectItem>
-                <SelectItem value="monthly">Monthly</SelectItem>
-              </SelectContent>
-            </Select>
+        <CardHeader className="pb-3 pt-5 px-5 bg-slate-50/50 border-b border-slate-100 flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <CardTitle className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                <Calculator size={16} className="text-teal-600" />
+                Performance Scoring Engine
+              </CardTitle>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Formula: <span className="font-medium text-slate-700">Intake × 5</span> + <span className="font-medium text-slate-700">Scheduling × 4</span> + <span className="font-medium text-slate-700">Insurance × 3</span> + <span className="font-medium text-slate-700">VOB Docs × 3</span> + <span className="font-medium text-slate-700">Fax × 1</span>
+              </p>
+            </div>
+            
+            {/* Embedded Inline Filter Bar */}
+            <div className="flex items-center flex-wrap gap-2.5 self-end sm:self-auto">
+              <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-2.5 py-1 shadow-2xs">
+                <span className="text-[11px] text-slate-400 font-medium">From:</span>
+                <Input
+                  type="date"
+                  value={localDateFrom}
+                  onChange={(e) => setLocalDateFrom(e.target.value)}
+                  className="h-6 w-[105px] text-[11px] border-0 p-0 focus-visible:ring-0 shadow-none"
+                />
+                <span className="text-[10px] text-slate-200 mx-0.5">|</span>
+                <span className="text-[11px] text-slate-400 font-medium">To:</span>
+                <Input
+                  type="date"
+                  value={localDateTo}
+                  onChange={(e) => setLocalDateTo(e.target.value)}
+                  className="h-6 w-[105px] text-[11px] border-0 p-0 focus-visible:ring-0 shadow-none"
+                />
+                {(localDateFrom || localDateTo) && (
+                  <button
+                    onClick={() => { setLocalDateFrom(''); setLocalDateTo(''); }}
+                    className="text-[11px] text-red-500 hover:text-red-600 font-semibold ml-1.5"
+                    title="Reset dates"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-2 py-1 shadow-2xs">
+                <span className="text-[11px] text-slate-400 font-medium pl-1">View:</span>
+                <Select value={timeframe} onValueChange={setTimeframe}>
+                  <SelectTrigger className="w-[105px] h-6 text-[11px] border-0 p-0 font-medium text-teal-700 focus:ring-0 shadow-none">
+                    <SelectValue placeholder="Select" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="total" className="text-[11px] font-semibold text-teal-800">Total Period</SelectItem>
+                    <SelectItem value="daily" className="text-[11px]">Daily</SelectItem>
+                    <SelectItem value="weekly" className="text-[11px]">Weekly</SelectItem>
+                    <SelectItem value="monthly" className="text-[11px]">Monthly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
