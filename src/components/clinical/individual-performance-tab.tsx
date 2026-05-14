@@ -163,7 +163,7 @@ export function IndividualPerformanceTab({ data }: AgentPerformanceTabProps) {
 
     const rows = Array.from(map.values());
     for (const row of rows) {
-      row.score = (row.pi * 5) + (row.sch * 4) + (row.ins * 3) + (row.vob * 3) + (row.fax * 1);
+      row.score = (row.pi * 5) + (row.ins * 3) + (row.fax * 3) + (row.vob * 2) + (row.sch * 1);
     }
 
     return rows.sort((a, b) => {
@@ -319,7 +319,7 @@ export function IndividualPerformanceTab({ data }: AgentPerformanceTabProps) {
                 Performance Scoring Engine
               </CardTitle>
               <p className="text-[11px] text-slate-500 mt-1">
-                Formula: <span className="font-medium text-slate-700">Intake × 5</span> + <span className="font-medium text-slate-700">Scheduling × 4</span> + <span className="font-medium text-slate-700">Insurance × 3</span> + <span className="font-medium text-slate-700">VOB Docs × 3</span> + <span className="font-medium text-slate-700">Fax × 1</span>
+                Formula: <span className="font-medium text-slate-700">Intake × 5</span> + <span className="font-medium text-slate-700">Insurance × 3</span> + <span className="font-medium text-slate-700">Fax × 3</span> + <span className="font-medium text-slate-700">VOB × 2</span> + <span className="font-medium text-slate-700">Scheduling × 1</span>
               </p>
             </div>
             
@@ -377,10 +377,10 @@ export function IndividualPerformanceTab({ data }: AgentPerformanceTabProps) {
                   <TableHead className="text-xs font-semibold text-slate-600 pl-5">Timeframe</TableHead>
                   <TableHead className="text-xs font-semibold text-slate-600">Individual Name</TableHead>
                   <TableHead className="text-xs font-semibold text-slate-600 text-center">Intake (×5)</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-600 text-center">Scheduling (×4)</TableHead>
                   <TableHead className="text-xs font-semibold text-slate-600 text-center">Insurance (×3)</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-600 text-center">VOB Docs (×3)</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-600 text-center">Fax (×1)</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-600 text-center">Fax (×3)</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-600 text-center">VOB (×2)</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-600 text-center">Scheduling (×1)</TableHead>
                   <TableHead className="text-xs font-bold text-teal-700 text-right pr-5">Total Score</TableHead>
                 </TableRow>
               </TableHeader>
@@ -404,16 +404,16 @@ export function IndividualPerformanceTab({ data }: AgentPerformanceTabProps) {
                         {row.pi.toLocaleString()}
                       </TableCell>
                       <TableCell className="text-xs text-slate-600 text-center">
-                        {row.sch.toLocaleString()}
+                        {row.ins.toLocaleString()}
                       </TableCell>
                       <TableCell className="text-xs text-slate-600 text-center">
-                        {row.ins.toLocaleString()}
+                        {row.fax.toLocaleString()}
                       </TableCell>
                       <TableCell className="text-xs text-slate-600 text-center">
                         {row.vob.toLocaleString()}
                       </TableCell>
                       <TableCell className="text-xs text-slate-600 text-center">
-                        {row.fax.toLocaleString()}
+                        {row.sch.toLocaleString()}
                       </TableCell>
                       <TableCell className="text-xs font-bold text-teal-600 text-right pr-5 bg-teal-50/30">
                         {row.score.toLocaleString()}

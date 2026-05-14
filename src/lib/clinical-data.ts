@@ -913,7 +913,7 @@ export function getAgentSummaries(data: ClinicalRecord[]): AgentSummary[] {
   // Compute weighted performance score for each agent
   const result = Array.from(map.values()).map(a => ({
     ...a,
-    score: (a.pi * 5) + (a.sch * 4) + (a.ins * 3) + (a.vob * 3) + (a.fax * 1),
+    score: (a.pi * 5) + (a.ins * 3) + (a.fax * 3) + (a.vob * 2) + (a.sch * 1),
   }));
 
   // Sort by weighted score descending (top performer first)
