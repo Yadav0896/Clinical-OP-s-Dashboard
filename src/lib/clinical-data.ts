@@ -117,8 +117,8 @@ export function modTasks(r: ClinicalRecord, mod: string): number {
       // Strictly pure row count of Insurance Validation tasks per user specification
       return r.insuranceUpdated;
     case 'Scheduling':
-      // Total + New + Follow-Up + Duplicate Patients
-      return r.schedTotal + r.newPatients + r.followUp + r.duplicatesFound;
+      // Pure row counts of Scheduling sheet + Duplicate Patients sheet per user specification
+      return r.schedTotal + r.duplicatesFound;
     case 'Fax':
       // COUNT of fax rows (faxReceived)
       return Number(r.faxReceived || 0);
