@@ -25,26 +25,20 @@ export function KpiCards({ data }: KpiCardsProps) {
     const uniqueDays = new Set(data.map(r => r.date).filter(Boolean));
     const total = data.reduce((sum, r) => sum + totalTasks(r), 0);
 
-    const agentTotals = new Map<string, number>();
-    data.forEach(r => {
-      const name = r.agent || 'Unknown';
-      agentTotals.set(name, (agentTotals.get(name) || 0) + totalTasks(r));
-    });
-    let topAgent = 'N/A';
-    let topCount = 0;
-    agentTotals.forEach((count, agent) => {
-      if (count > topCount) { topCount = count; topAgent = agent; }
-    });
+    // Use getAgentSummaries (now sorted by weighted score)
+    const summaries = getAgentSummaries(data);
+    const topAgent = summaries.length > 0 ? summaries[0].agent : 'N/A';
+    const topScore = summaries.length > 0 ? summaries[0].score : 0;
 
+    // Fax: classification rate (Step 1)
     const faxReceived = data.reduce((s, r) => s + r.faxReceived, 0);
     const faxClassified = data.reduce((s, r) => s + r.faxClassified, 0);
     const faxRate = faxReceived > 0 ? Math.round((faxClassified / faxReceived) * 100) : 0;
 
-    const vobTotal = data.reduce((s, r) => s + r.vobTotal, 0);
-    const vobMatched = data.reduce((s, r) => s + r.vobMatched, 0);
-    const vobRate = vobTotal > 0 ? Math.round((vobMatched / vobTotal) * 100) : 0;
-
-    const summaries = getAgentSummaries(data);
+    // VOB Match Rate: using only VOB Doc Upload sheet
+    const vobDocTotal = data.reduce((s, r) => s + r.vobDocTotal, 0);
+    const vobDocMatched = data.reduce((s, r) => s + r.vobDocMatched, 0);
+    const vobRate = vobDocTotal > 0 ? Math.round((vobDocMatched / vobDocTotal) * 100) : 0;
 
     return {
       total,
@@ -52,9 +46,13 @@ export function KpiCards({ data }: KpiCardsProps) {
       days: uniqueDays.size,
       avg: uniqueDays.size > 0 ? Math.round(total / uniqueDays.size) : 0,
       topAgent,
-      topCount,
+      topScore,
       faxRate,
+      faxReceived,
+      faxClassified,
       vobRate,
+      vobDocTotal,
+      vobDocMatched,
       summaries,
     };
   }, [data]);
@@ -63,9 +61,15 @@ export function KpiCards({ data }: KpiCardsProps) {
     total: { value: metrics.total.toLocaleString(), sub: `${data.length} records` },
     agents: { value: String(metrics.agents), sub: `${metrics.days} days tracked` },
     avg: { value: String(metrics.avg), sub: 'Per active day' },
-    top: { value: metrics.topAgent.split(' ')[0], sub: `${metrics.topCount.toLocaleString()} tasks` },
-    fax: { value: `${metrics.faxRate}%`, sub: 'Classification rate' },
-    vob: { value: `${metrics.vobRate}%`, sub: 'Match rate' },
+    top: { 
+      value: metrics.topAgent.split(' ')[0], 
+      sub: `${metrics.topScore.toLocaleString()} score` 
+    },
+    fax: { value: `${metrics.faxRate}%`, sub: 'Classified rate' },
+    vob: { 
+      value: `${metrics.vobDocMatched}/${metrics.vobDocTotal}`, 
+      sub: `${metrics.vobRate}% match` 
+    },
   };
 
   return (

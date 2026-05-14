@@ -64,9 +64,16 @@ function getMonthLabel(dateStr: string): string {
 }
 
 export function IndividualPerformanceTab({ data }: AgentPerformanceTabProps) {
-  const [timeframe, setTimeframe] = useState<string>('total');
-  const [localDateFrom, setLocalDateFrom] = useState<string>('');
-  const [localDateTo, setLocalDateTo] = useState<string>('');
+  console.log('[IndividualPerfTab] Raw data count:', data.length);
+  if (data.length > 0) {
+    console.log('[IndividualPerfTab] Sample record:', data[0]);
+    console.log('[IndividualPerfTab] Agents:', [...new Set(data.map(r => r.agent))]);
+    console.log('[IndividualPerfTab] Unique dates:', [...new Set(data.map(r => r.date))].slice(0, 5));
+  }
+
+   const [timeframe, setTimeframe] = useState<string>('total');
+   const [localDateFrom, setLocalDateFrom] = useState<string>('');
+   const [localDateTo, setLocalDateTo] = useState<string>('');
 
   const performanceData = useMemo(() => {
     return data.filter(r => {
@@ -77,8 +84,17 @@ export function IndividualPerformanceTab({ data }: AgentPerformanceTabProps) {
     });
   }, [data, localDateFrom, localDateTo]);
 
-  const summaries = useMemo(() => getAgentSummaries(performanceData), [performanceData]);
-  const maxTotal = summaries[0]?.total || 1;
+   const summaries = useMemo(() => {
+     const s = getAgentSummaries(performanceData);
+     console.log('[IndividualPerfTab] Summaries:', s.map(a => ({
+       agent: a.agent,
+       total: a.total,
+       pi: a.pi, ins: a.ins, sch: a.sch, fax: a.fax, vob: a.vob,
+       days: a.days.size
+     })));
+     return s;
+   }, [performanceData]);
+   const maxTotal = summaries[0]?.total || 1;
 
   const stackedData = useMemo(() => {
     return summaries.map(a => ({
