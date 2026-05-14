@@ -63,7 +63,7 @@ function getMonthLabel(dateStr: string): string {
 }
 
 export function IndividualPerformanceTab({ data }: AgentPerformanceTabProps) {
-  const [timeframe, setTimeframe] = useState<string>('daily');
+  const [timeframe, setTimeframe] = useState<string>('total');
 
   const summaries = useMemo(() => getAgentSummaries(data), [data]);
   const maxTotal = summaries[0]?.total || 1;
@@ -80,6 +80,15 @@ export function IndividualPerformanceTab({ data }: AgentPerformanceTabProps) {
     }));
   }, [summaries]);
 
+  const dateRangeLabel = useMemo(() => {
+    const dates = data.map(r => r.date).filter(Boolean).sort();
+    if (dates.length === 0) return 'All Dates';
+    const min = dates[0];
+    const max = dates[dates.length - 1];
+    if (min === max) return min;
+    return `${min} to ${max}`;
+  }, [data]);
+
   const scoreRows = useMemo(() => {
     const map = new Map<string, ScoreRow>();
 
@@ -87,10 +96,13 @@ export function IndividualPerformanceTab({ data }: AgentPerformanceTabProps) {
       const agent = r.agent || 'Unknown';
       const dateStr = r.date || 'Unknown';
 
-      let label = dateStr;
-      let sortKey = dateStr;
+      let label = dateRangeLabel;
+      let sortKey = '0';
 
-      if (timeframe === 'weekly') {
+      if (timeframe === 'daily') {
+        label = dateStr;
+        sortKey = dateStr;
+      } else if (timeframe === 'weekly') {
         label = getWeekLabel(dateStr);
         sortKey = label;
       } else if (timeframe === 'monthly') {
@@ -98,7 +110,7 @@ export function IndividualPerformanceTab({ data }: AgentPerformanceTabProps) {
         sortKey = dateStr.slice(0, 7); // YYYY-MM
       }
 
-      const key = `${sortKey}::${agent}`;
+      const key = timeframe === 'total' ? agent : `${sortKey}::${agent}`;
       if (!map.has(key)) {
         map.set(key, {
           timeframeLabel: label,
@@ -127,11 +139,13 @@ export function IndividualPerformanceTab({ data }: AgentPerformanceTabProps) {
     }
 
     return rows.sort((a, b) => {
-      const tCompare = b.timeframeSortKey.localeCompare(a.timeframeSortKey);
-      if (tCompare !== 0) return tCompare;
+      if (timeframe !== 'total') {
+        const tCompare = b.timeframeSortKey.localeCompare(a.timeframeSortKey);
+        if (tCompare !== 0) return tCompare;
+      }
       return b.score - a.score;
     });
-  }, [data, timeframe]);
+  }, [data, timeframe, dateRangeLabel]);
 
   const modules = [
     { name: 'Patient Intake', color: MOD_COLORS[0] },
@@ -282,10 +296,11 @@ export function IndividualPerformanceTab({ data }: AgentPerformanceTabProps) {
           <div className="flex items-center gap-2 self-end sm:self-auto">
             <span className="text-xs text-slate-500 font-medium">Timeframe:</span>
             <Select value={timeframe} onValueChange={setTimeframe}>
-              <SelectTrigger className="w-[120px] h-8 text-xs bg-white border-slate-200">
+              <SelectTrigger className="w-[140px] h-8 text-xs bg-white border-slate-200 font-medium text-teal-700">
                 <SelectValue placeholder="Select" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="total" className="font-semibold text-teal-800">Total Period</SelectItem>
                 <SelectItem value="daily">Daily</SelectItem>
                 <SelectItem value="weekly">Weekly</SelectItem>
                 <SelectItem value="monthly">Monthly</SelectItem>
